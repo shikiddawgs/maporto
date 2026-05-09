@@ -1,77 +1,32 @@
 [
   {
-    "id": "1777642449764",
-    "title": "PMV Eula",
-    "category": "AMV",
-    "description": "edited by kido made in affter effect",
-    "type": "video",
-    "url": "/uploads/1777642449163-8oa890.mp4",
-    "thumbnailUrl": "/uploads/1777642449668-mkntk5.png",
-    "createdAt": "2026-05-01T13:34:09.764Z"
-  },
-  {
-    "id": "1777631061203",
-    "title": "Skirk AMV",
-    "category": "AMV",
-    "description": "AMV skikr wake me upp edit",
-    "type": "video",
-    "url": "/uploads/1777631060628-wrrm6f.mp4",
-    "thumbnailUrl": "/uploads/1777631061065-ofdm3k.png",
-    "createdAt": "2026-05-01T10:24:21.203Z"
-  },
-  {
-    "id": "1777628028422",
-    "title": "PMV Collaboration With Alee",
-    "category": "AMV",
-    "description": "PMV edit kicau mania",
-    "type": "video",
-    "url": "/uploads/1777628028117-mxk8v9.mp4",
-    "thumbnailUrl": "/uploads/1777628028387-w9zg3a.png",
-    "createdAt": "2026-05-01T09:33:48.422Z"
-  },
-  {
-    "id": "1777434664328",
-    "title": "kidoo",
-    "category": "AMV",
-    "description": "testing",
-    "type": "video",
-    "url": "/uploads/1777434664084-3bw70i.mp4",
-    "createdAt": "2026-04-29T03:51:04.328Z"
-  },
-  {
-    "id": "sample-2",
-    "title": "Cyberpunk AMV — Awakening",
-    "category": "AMV",
-    "description": "High-energy AMV edit featuring fluid transitions, Sapphire lens flares, and dynamic typography motion.",
-    "type": "image",
-    "url": "https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=2070&auto=format&fit=crop",
-    "createdAt": "2026-04-28T10:00:00.000Z"
-  },
-  {
-    "id": "sample-3",
-    "title": "Demon Slayer — Flame Edit",
-    "category": "AMV",
-    "description": "Cinematic AMV with color-graded scenes, particle VFX and synchronized beat drops.",
-    "type": "image",
-    "url": "https://images.unsplash.com/photo-1541701494587-cb58502866ab?q=80&w=2070&auto=format&fit=crop",
-    "createdAt": "2026-04-27T10:00:00.000Z"
-  },
-  {
-    "id": "sample-4",
-    "title": "Motion Graphics — Opener",
+    "id": "1778341302996",
+    "title": "Thumnail",
     "category": "GFX Design",
-    "description": "Corporate-style animated opener with kinetic typography and After Effects expressions.",
+    "description": "Thumnail yang akan ku pakai di tiap vidio",
     "type": "image",
-    "url": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2070&auto=format&fit=crop",
-    "createdAt": "2026-04-26T10:00:00.000Z"
+    "url": "/uploads/1778341302969-kbh4fx.png",
+    "thumbnailUrl": "",
+    "createdAt": "2026-05-09T15:41:42.996Z"
   },
   {
-    "id": "sample-6",
-    "title": "Abstract VFX — Particles",
-    "category": "GFX Design",
-    "description": "Abstract particle simulation and generative art using After Effects expressions and Trapcode Particular.",
-    "type": "image",
-    "url": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2070&auto=format&fit=crop",
-    "createdAt": "2026-04-24T10:00:00.000Z"
+    "id": "1778341259336",
+    "title": "Beatrix \"Kiss Me\" Gameplay Edit",
+    "category": "AMV",
+    "description": "MLBB Beatrix fast-paced edit. Features tight beat-syncing, dynamic transitions, and text overlays synced to the music.\nTools: After effect 2021",
+    "type": "video",
+    "url": "/uploads/1778341259135-6zbax9.mp4",
+    "thumbnailUrl": "/uploads/1778341259309-qvjjzk.png",
+    "createdAt": "2026-05-09T15:40:59.336Z"
+  },
+  {
+    "id": "1778338079571",
+    "title": "Hiyuki Neon Edit PMV - No Horny",
+    "category": "AMV",
+    "description": "A short aesthetic PMV featuring Hiyuki, focusing on neon glow overlays, smooth masking, and beat-sync transitions. Includes a little surprise meme at the end.\n\nSW:Aftter effect",
+    "type": "video",
+    "url": "/uploads/1778338079399-wdplva.mp4",
+    "thumbnailUrl": "/uploads/1778338079546-1uuucv.png",
+    "createdAt": "2026-05-09T14:47:59.571Z"
   }
 ]

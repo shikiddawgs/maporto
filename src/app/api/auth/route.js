@@ -15,3 +15,8 @@ export async function POST(request) {
 
   return NextResponse.json({ success: false, message: "Invalid password" }, { status: 401 });
 }
+
+export async function DELETE() {
+  (await cookies()).delete("admin_auth");
+  return NextResponse.json({ success: true });
+}

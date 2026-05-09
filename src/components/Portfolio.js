@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import { motion, useInView } from "framer-motion";
-import { Play } from "lucide-react";
+import { motion, useInView, AnimatePresence } from "framer-motion";
+import { Play, X, Maximize2, ExternalLink } from "lucide-react";
 
 // Helper: extracts YouTube video ID
 function getYoutubeId(url) {
@@ -13,56 +13,26 @@ function getYoutubeId(url) {
   return match ? match[1] : null;
 }
 
-function VideoCard({ item, index }) {
-  const videoRef = useRef(null);
+function VideoCard({ item, index, onOpenLightbox }) {
   const [isHovered, setIsHovered] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
   const cardRef = useRef(null);
   const inView = useInView(cardRef, { once: true, margin: "-80px" });
 
   const youtubeId = item.type === "video" ? getYoutubeId(item.url) : null;
   const isNativeVideo = item.type === "video" && !youtubeId;
 
-  const handleMouseEnter = useCallback(() => {
-    setIsHovered(true);
-    if (isNativeVideo && videoRef.current) {
-      videoRef.current.muted = true; // silent preview on hover
-      videoRef.current.play().catch(() => { });
-      setIsPlaying(true);
-    }
-  }, [isNativeVideo]);
-
-  const handleMouseLeave = useCallback(() => {
-    setIsHovered(false);
-    if (isNativeVideo && videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-      videoRef.current.muted = true; // reset to muted
-      setIsPlaying(false);
-    }
-  }, [isNativeVideo]);
-
-  const handleClick = useCallback((e) => {
-    if (isNativeVideo && videoRef.current) {
-      e.stopPropagation();
-      const video = videoRef.current;
-      video.muted = !video.muted;
-      if (!video.muted) {
-        video.currentTime = 0; // restart with sound
-        video.play().catch(() => { });
-      }
-    }
-  }, [isNativeVideo]);
+  const handleMouseEnter = () => setIsHovered(true);
+  const handleMouseLeave = () => setIsHovered(false);
 
   const categoryColors = {
-    Creative: "#ff1e6b",
-    IT: "#ff0055",
-    Design: "#e31c5f",
-    Motion: "#b31b54",
+    Creative: "#1e293b",
+    IT: "#334155",
+    Design: "#475569",
+    Motion: "#0f172a",
+    AMV: "#1e293b"
   };
-  const catColor = categoryColors[item.category] || "#6a4cff";
+  const catColor = categoryColors[item.category] || "#1e293b";
 
-  // staggered slide-up
   const variants = {
     hidden: { opacity: 0, y: 60, scale: 0.94 },
     visible: {
@@ -85,55 +55,86 @@ function VideoCard({ item, index }) {
       animate={inView ? "visible" : "hidden"}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      onClick={handleClick}
-      className="group relative glass-card rounded-2xl overflow-hidden cursor-pointer card-lift"
+      onClick={() => onOpenLightbox(item)}
+      className="group relative glass-card rounded-2xl overflow-hidden cursor-pointer card-lift shadow-xl"
       id={`video-card-${item.id}`}
       style={{
         "--card-glow": catColor,
       }}
     >
-      {/* Glow border on hover */}
+      {/* Soft border on hover */}
       <div
         className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
         style={{
-          boxShadow: `0 0 0 1px ${catColor}80, 0 0 30px ${catColor}30, 0 0 60px ${catColor}15`,
+          boxShadow: `0 0 0 1px rgba(0,0,0,0.1), 0 10px 30px rgba(0,0,0,0.05)`,
         }}
       />
 
-      {/* 4:3 aspect ratio wrapper */}
-      <div className="relative w-full" style={{ paddingBottom: "75%" }}>
-        <div className="absolute inset-0 bg-[#f0f4f8]">
-          {/* Native Video */}
+      {/* 16:9 aspect ratio wrapper (YouTube Standard) */}
+      <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+        <div className="absolute inset-0 bg-[#0a0308]">
+          {/* Native Video: Conditional rendering to ensure reset to thumbnail */}
           {isNativeVideo && (
-            <video
-              ref={videoRef}
-              src={item.url}
-              poster={item.thumbnailUrl}
-              loop
-              playsInline
-              preload="metadata"
-              className="w-full h-full object-cover"
-            />
+            <div className="relative w-full h-full overflow-hidden">
+              <img
+                src={item.thumbnailUrl}
+                alt={item.title}
+                className={`absolute inset-0 w-full h-full object-cover transition-all duration-300 ${isHovered ? "blur-2xl opacity-50 scale-110" : "opacity-100"}`}
+              />
+              {isHovered && (
+                <>
+                  <video
+                    src={item.url}
+                    loop
+                    muted
+                    autoPlay
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-50 scale-110 pointer-events-none"
+                  />
+                  <video
+                    src={item.url}
+                    loop
+                    muted
+                    autoPlay
+                    playsInline
+                    className="relative z-10 w-full h-full object-contain"
+                  />
+                </>
+              )}
+            </div>
           )}
 
-          {/* YouTube embed */}
+          {/* YouTube Preview Logic: Reset to thumbnail on leave */}
           {youtubeId && (
-            <iframe
-              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=${isHovered ? 1 : 0
-                }&mute=1&loop=1&playlist=${youtubeId}&controls=0&showinfo=0&rel=0&modestbranding=1`}
-              title={item.title}
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-              className="w-full h-full border-0"
-              style={{ pointerEvents: isHovered ? "auto" : "none" }}
-            />
+            <div className="relative w-full h-full overflow-hidden">
+              <img
+                src={item.thumbnailUrl || `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`}
+                alt={item.title}
+                className={`absolute inset-0 w-full h-full object-cover transition-all duration-300 ${isHovered ? "blur-2xl opacity-50 scale-110" : "opacity-100"}`}
+              />
+              {isHovered && (
+                <>
+                  <iframe
+                    src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=0&showinfo=0&rel=0&modestbranding=1`}
+                    title={`${item.title} blur`}
+                    allow="autoplay; encrypted-media"
+                    className="absolute inset-0 w-full h-full border-0 object-cover blur-2xl opacity-50 scale-125 pointer-events-none"
+                  />
+                  <iframe
+                    src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=0&showinfo=0&rel=0&modestbranding=1`}
+                    title={item.title}
+                    allow="autoplay; encrypted-media"
+                    className="relative z-10 w-full h-full border-0 object-contain"
+                  />
+                </>
+              )}
+            </div>
           )}
 
           {/* Image or placeholder */}
           {!isNativeVideo && !youtubeId && (
             <div className="relative w-full h-full">
               {item.url && (item.type === "image" || !item.type) ? (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={item.url}
                   alt={item.title}
@@ -152,38 +153,20 @@ function VideoCard({ item, index }) {
                   </div>
                 </div>
               )}
-
-              {/* Hover shimmer overlay for images */}
-              {(item.type === "image" || !item.type) && (
-                <div className="absolute inset-0 bg-gradient-to-t from-[rgba(255,30,107,0.2)] via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              )}
             </div>
           )}
 
-          {/* Play icon overlay for native video */}
-          {isNativeVideo && (
-            <div
-              className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${isPlaying ? "opacity-0" : "opacity-100 group-hover:opacity-0"
-                }`}
-            >
-              <div
-                className="w-14 h-14 rounded-full flex items-center justify-center glass"
-                style={{ border: `1px solid ${catColor}60` }}
-              >
-                <Play size={22} style={{ color: catColor }} />
-              </div>
-            </div>
-          )}
+
         </div>
       </div>
 
       {/* Card Info */}
-      <div className="p-4 bg-black/40 backdrop-blur-md">
+      <div className="p-4 backdrop-blur-md" style={{ background: "var(--bg-glass)" }}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-sm text-white truncate">{item.title}</p>
+            <p className="font-bold text-sm text-slate-800 truncate">{item.title}</p>
             {item.description && (
-              <p className="text-rose-200/50 text-xs mt-1 line-clamp-2 leading-relaxed font-medium">
+              <p className="text-slate-500 text-xs mt-1 line-clamp-1 leading-relaxed font-medium">
                 {item.description}
               </p>
             )}
@@ -191,11 +174,11 @@ function VideoCard({ item, index }) {
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
             {item.category && (
               <span
-                className="text-[10px] font-semibold tracking-widest uppercase px-2.5 py-1 rounded-lg"
+                className="text-[9px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-md"
                 style={{
                   color: catColor,
-                  background: `${catColor}18`,
-                  border: `1px solid ${catColor}30`,
+                  background: `${catColor}15`,
+                  border: `1px solid ${catColor}20`,
                 }}
               >
                 {item.category}
@@ -208,24 +191,46 @@ function VideoCard({ item, index }) {
   );
 }
 
+
 export default function Portfolio() {
   const [videos, setVideos] = useState([]);
   const [filter, setFilter] = useState("AMV");
   const [loading, setLoading] = useState(true);
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  
   const sectionRef = useRef(null);
   const inView = useInView(sectionRef, { once: true, margin: "-100px" });
+
+  // Lock body scroll + Lenis when lightbox is open
+  useEffect(() => {
+    if (selectedVideo) {
+      document.body.style.overflow = "hidden";
+      if (window.__lenis) window.__lenis.stop();
+    } else {
+      document.body.style.overflow = "";
+      if (window.__lenis) window.__lenis.start();
+    }
+    return () => {
+      document.body.style.overflow = "";
+      if (window.__lenis) window.__lenis.start();
+    };
+  }, [selectedVideo]);
 
   useEffect(() => {
     fetch("/api/videos")
       .then((r) => r.json())
       .then((data) => {
-        setVideos(Array.isArray(data) ? data : []);
+        const videoList = Array.isArray(data) ? data : [];
+        setVideos(videoList);
+        if (videoList.length > 0) {
+          const cats = [...new Set(videoList.map(v => v.category).filter(Boolean))];
+          if (cats.length > 0 && !cats.includes(filter)) setFilter(cats[0]);
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [filter]);
 
-  // Filter out any empty categories
   const categories = [...new Set(videos.map((v) => v.category).filter(Boolean))];
   const filtered = videos.filter((v) => v.category === filter);
 
@@ -241,14 +246,14 @@ export default function Portfolio() {
         >
           <p className="section-label mb-3">✦ Portfolio ✦</p>
           <h2
-            className="text-4xl sm:text-5xl font-black gradient-text neon-glow-text mb-4"
+            className="text-4xl sm:text-5xl font-black text-black mograph-title-shadow mb-4"
             style={{ fontFamily: "var(--font-outfit), sans-serif" }}
           >
             My Projects
           </h2>
-          <div className="neon-divider w-32 mx-auto mb-6 bg-[rgba(255,30,107,0.2)]" />
-          <p className="text-rose-200/50 max-w-md mx-auto text-sm leading-relaxed font-medium">
-            A curated collection of my cinematic edits, motion graphics, and design projects.
+          <div className="mograph-divider w-32 mx-auto mb-6" />
+          <p className="text-slate-500 max-w-md mx-auto text-sm leading-relaxed font-medium">
+            Just a collection of my early edits. Still learning and trying to improve my skills!
           </p>
         </motion.div>
 
@@ -265,19 +270,10 @@ export default function Portfolio() {
               onClick={() => setFilter(cat)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.97 }}
-              id={`filter-${cat.toLowerCase()}`}
-              className={`px-5 py-2 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 ${filter === cat
-                  ? "text-white shadow-[0_0_20px_rgba(255,30,107,0.3)]"
-                  : "text-rose-200/50 hover:text-white bg-black/40 border border-white/5 hover:border-rose-500/30"
+              className={`px-5 py-2 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 shadow-md ${filter === cat
+                  ? "text-white bg-accent-primary"
+                  : "text-slate-500 hover:text-slate-900 bg-slate-100/50 border border-black/[0.05]"
                 }`}
-              style={
-                filter === cat
-                  ? {
-                    background: "linear-gradient(135deg, #ff1e6b, #e31c5f)",
-                    border: "1px solid transparent",
-                  }
-                  : { background: "rgba(0,0,0,0.4)" }
-              }
             >
               {cat}
             </motion.button>
@@ -285,30 +281,104 @@ export default function Portfolio() {
         </motion.div>
 
         {/* Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div
-                key={i}
-                className="glass-card rounded-2xl overflow-hidden"
-                style={{ paddingBottom: "75%" }}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filtered.map((item, index) => (
+            <VideoCard key={item.id} item={item} index={index} onOpenLightbox={setSelectedVideo} />
+          ))}
+        </div>
+
+        {/* Floating Video Window */}
+        <AnimatePresence>
+          {selectedVideo && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center"
+              style={{ touchAction: "none" }}
+              onWheel={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.preventDefault()}
+              onClick={() => setSelectedVideo(null)}
+            >
+              {/* Backdrop */}
+              <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+
+              {/* Floating Window */}
+              <motion.div
+                initial={{ scale: 0.85, opacity: 0, y: 30 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.85, opacity: 0, y: 30 }}
+                transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                className="relative z-10 w-[92%] max-w-5xl rounded-2xl overflow-hidden"
+                style={{
+                  boxShadow: "0 25px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08)",
+                  background: "#0a0a0a",
+                }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <div className="shimmer w-full h-full" />
-              </div>
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-24">
-            <div className="text-5xl mb-4 opacity-30 text-rose-500">◈</div>
-            <p className="text-rose-200/40 font-medium">No projects found in this category.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((item, index) => (
-              <VideoCard key={item.id} item={item} index={index} />
-            ))}
-          </div>
-        )}
+                {/* Window Title Bar */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]"
+                  style={{ background: "rgba(20,20,20,0.95)" }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setSelectedVideo(null)}
+                        className="w-3 h-3 rounded-full bg-[#ff5f57] hover:bg-[#ff3b30] transition-colors cursor-pointer"
+                      />
+                      <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
+                      <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+                    </div>
+                    <p className="text-white/60 text-xs font-medium truncate max-w-[300px] ml-2">
+                      {selectedVideo.title}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedVideo(null)}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Video Content */}
+                <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+                  <div className="absolute inset-0">
+                    {getYoutubeId(selectedVideo.url) ? (
+                      <iframe
+                        src={`https://www.youtube.com/embed/${getYoutubeId(selectedVideo.url)}?autoplay=1&controls=1&rel=0`}
+                        title={selectedVideo.title}
+                        allow="autoplay; encrypted-media; fullscreen"
+                        allowFullScreen
+                        className="w-full h-full border-0"
+                      />
+                    ) : selectedVideo.type === "video" ? (
+                      <video
+                        src={selectedVideo.url}
+                        controls
+                        autoPlay
+                        className="w-full h-full object-contain bg-black"
+                      />
+                    ) : (
+                      <img src={selectedVideo.url} alt={selectedVideo.title} className="w-full h-full object-contain bg-black" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Bottom Info Bar */}
+                <div className="px-5 py-4 border-t border-white/[0.06]"
+                  style={{ background: "rgba(20,20,20,0.95)" }}
+                >
+                  <h3 className="text-sm font-bold text-white mb-0.5">{selectedVideo.title}</h3>
+                  {selectedVideo.description && (
+                    <p className="text-white/40 text-xs">{selectedVideo.description}</p>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </section>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useInView, useSpring, useMotionValue } from "framer-motion";
+import { motion, useInView, useSpring, useMotionValue, useScroll, useTransform } from "framer-motion";
 
 const skills = [
   {
@@ -9,8 +9,8 @@ const skills = [
     name: "After Effects",
     level: 92,
     icon: "Ae",
-    iconBg: "rgba(255, 30, 107, 0.1)",
-    iconColor: "#ff1e6b",
+    iconBg: "#00005c",
+    iconColor: "#31a8ff",
     category: "Software",
   },
   {
@@ -18,8 +18,8 @@ const skills = [
     name: "Alight Motion",
     level: 88,
     icon: "AM",
-    iconBg: "#f0fcf9",
-    iconColor: "#059669",
+    iconBg: "#004d3d",
+    iconColor: "#00d293",
     category: "Software",
   },
   {
@@ -27,8 +27,8 @@ const skills = [
     name: "CapCut",
     level: 90,
     icon: "CC",
-    iconBg: "#ffffff",
-    iconColor: "#1e293b",
+    iconBg: "#111111",
+    iconColor: "#25f4ee",
     category: "Software",
   },
   {
@@ -36,7 +36,7 @@ const skills = [
     name: "AMV Editing",
     level: 95,
     icon: "▶",
-    iconBg: "rgba(255, 30, 107, 0.1)",
+    iconBg: "rgba(255, 0, 85, 0.1)",
     iconColor: "#ff0055",
     category: "Skill",
   },
@@ -45,8 +45,8 @@ const skills = [
     name: "Motion Graphics",
     level: 85,
     icon: "◈",
-    iconBg: "rgba(227, 28, 95, 0.1)",
-    iconColor: "#e31c5f",
+    iconBg: "rgba(147, 51, 234, 0.1)",
+    iconColor: "#9333ea",
     category: "Skill",
   },
   {
@@ -54,8 +54,8 @@ const skills = [
     name: "Visual Effects",
     level: 80,
     icon: "✦",
-    iconBg: "rgba(179, 27, 84, 0.1)",
-    iconColor: "#b31b54",
+    iconBg: "rgba(245, 158, 11, 0.1)",
+    iconColor: "#f59e0b",
     category: "Skill",
   },
   {
@@ -63,8 +63,8 @@ const skills = [
     name: "Sapphire",
     level: 78,
     icon: "◆",
-    iconBg: "rgba(255, 30, 107, 0.1)",
-    iconColor: "#ff1e6b",
+    iconBg: "#002b5c",
+    iconColor: "#00a3ff",
     category: "Plugin",
   },
   {
@@ -72,8 +72,8 @@ const skills = [
     name: "Magic Bullet Looks",
     level: 82,
     icon: "◉",
-    iconBg: "#fffbeb",
-    iconColor: "#d97706",
+    iconBg: "#4a2200",
+    iconColor: "#ff8800",
     category: "Plugin",
   },
 ];
@@ -81,27 +81,23 @@ const skills = [
 const timeline = [
   {
     year: "2020",
-    title: "Started AMV Journey",
-    desc: "Began creating anime music videos. Fell in love with motion and storytelling through editing.",
-    accent: "#ff1e6b",
+    title: "Started Editing for Fun",
+    desc: "Started making simple AMVs using my phone and basic PC software. Just messing around with clips and music.",
   },
   {
     year: "2022",
-    title: "Mastered After Effects",
-    desc: "Transitioned to Adobe After Effects and started exploring motion graphics, VFX, and plugin-based workflows.",
-    accent: "#e31c5f",
+    title: "Trying Out After Effects",
+    desc: "Moved to After Effects. Still super confused by the keyframes and graphs, but trying to learn cool transitions.",
   },
   {
     year: "2023",
-    title: "Professional Projects",
-    desc: "Took on client projects and freelance work. Developed unique cinematic style with Sapphire & Magic Bullet.",
-    accent: "#ff0055",
+    title: "Exploring Plugins",
+    desc: "Found out about Sapphire and Magic Bullet. Slapping on too many effects but having a lot of fun experimenting.",
   },
   {
     year: "2024",
-    title: "Motion Graphics",
-    desc: "Expanded skills into professional motion design and visual effects for branding.",
-    accent: "#b31b54",
+    title: "Still Learning",
+    desc: "Still watching a bunch of YouTube tutorials to figure out how motion graphics and VFX actually work.",
   },
 ];
 
@@ -142,13 +138,18 @@ function SkillBadge({ skill, index }) {
       onMouseMove={handleMouse}
       onMouseLeave={handleLeave}
       whileHover={{ 
-        scale: 1.08, 
-        boxShadow: "0 0 20px rgba(255, 30, 107, 0.4), 0 0 40px rgba(255, 30, 107, 0.2)",
-        borderColor: "rgba(255, 30, 107, 0.6)"
+        scale: 1.05, 
+        boxShadow: `0 15px 40px ${skill.iconColor}25`,
+        borderColor: `${skill.iconColor}40`
       }}
-      whileTap={{ scale: 0.96 }}
-      className="glass-card rounded-2xl p-4 flex flex-col items-center text-center cursor-pointer group transition-all duration-300"
-      style={{ x: springX, y: springY, boxShadow: "0 4px 15px rgba(0, 0, 0, 0.3)" }}
+      whileTap={{ scale: 0.98 }}
+      className="glass-card rounded-2xl p-4 flex flex-col items-center text-center cursor-pointer group transition-all duration-300 bg-white/40 shadow-xl"
+      style={{ 
+        x: springX, 
+        y: springY, 
+        boxShadow: `0 8px 30px rgba(0,0,0,0.12), 0 4px 20px ${skill.iconColor}20`,
+        border: `1px solid ${skill.iconColor}10`
+      }}
     >
       {/* Icon */}
       <div
@@ -156,34 +157,32 @@ function SkillBadge({ skill, index }) {
         style={{
           background: skill.iconBg,
           color: skill.iconColor,
-          color: "#ff007f",
-          border: `1px solid #ff007f30`,
-          boxShadow: `0 0 20px #ff007f20`,
+          border: `1px solid ${skill.iconColor}30`,
+          boxShadow: `0 0 15px ${skill.iconColor}15`,
         }}
       >
         {skill.icon}
       </div>
 
-      <p className="font-bold text-xs text-white mb-1">{skill.name}</p>
+      <p className="font-bold text-xs text-slate-800 mb-1">{skill.name}</p>
 
       {/* Category badge */}
       <span
-        className="text-[9px] tracking-widest uppercase mb-3 font-semibold"
-        style={{ color: "#ff007f", opacity: 0.9 }}
+        className="text-[9px] tracking-widest uppercase mb-3 font-semibold text-accent-muted opacity-80"
       >
         {skill.category}
       </span>
 
       {/* Progress bar */}
-      <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden">
+      <div className="w-full h-1.5 rounded-full bg-black/5 overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
           animate={inView ? { width: `${skill.level}%` } : { width: 0 }}
           transition={{ duration: 1, delay: index * 0.07 + 0.3, ease: "easeOut" }}
           className="h-full rounded-full"
           style={{
-            background: `linear-gradient(90deg, ${skill.iconColor}99, ${skill.iconColor})`,
-            boxShadow: `0 0 8px ${skill.iconColor}40`,
+            background: skill.iconColor,
+            opacity: 0.8
           }}
         />
       </div>
@@ -199,7 +198,19 @@ function SkillBadge({ skill, index }) {
 
 export default function AboutSkills() {
   const sectionRef = useRef(null);
+  const timelineRef = useRef(null);
   const inView = useInView(sectionRef, { once: true, margin: "-80px" });
+
+  const { scrollYProgress } = useScroll({
+    target: timelineRef,
+    offset: ["start end", "end end"]
+  });
+
+  const scaleY = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
 
   return (
     <section id="skills" ref={sectionRef} className="relative z-10 py-28 px-6">
@@ -213,13 +224,13 @@ export default function AboutSkills() {
         >
           <p className="section-label mb-3">✦ Expertise ✦</p>
           <h2
-            className="text-4xl sm:text-5xl font-black gradient-text neon-glow-text mb-4"
+            className="text-4xl sm:text-5xl font-black text-black mograph-title-shadow mb-4"
             style={{ fontFamily: "var(--font-outfit), sans-serif" }}
           >
             Skills &amp; Experience
           </h2>
-          <div className="neon-divider w-32 mx-auto mb-6" />
-          <p className="text-rose-200/50 max-w-md mx-auto text-sm leading-relaxed font-medium">
+          <div className="mograph-divider w-32 mx-auto mb-6" />
+          <p className="text-slate-500 max-w-md mx-auto text-sm leading-relaxed font-medium">
             Tools and disciplines I&apos;ve honed over 3+ years of creative work.
           </p>
         </motion.div>
@@ -240,16 +251,22 @@ export default function AboutSkills() {
         >
           <p className="section-label mb-3">✦ Journey ✦</p>
           <h3
-            className="text-3xl font-black text-white"
+            className="text-3xl font-black text-slate-800"
             style={{ fontFamily: "var(--font-outfit), sans-serif" }}
           >
             My Timeline
           </h3>
         </motion.div>
 
-        <div className="relative">
-          {/* Center line */}
-          <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-rose-500/20 to-transparent" />
+        <div className="relative" ref={timelineRef}>
+          {/* Background line */}
+          <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-1 -translate-x-1/2 rounded-full" style={{ background: 'var(--accent-tint)' }} />
+          
+          {/* Animated Progress line */}
+          <motion.div 
+            className="hidden md:block absolute left-1/2 top-0 bottom-0 w-1 -translate-x-1/2 origin-top rounded-full z-10"
+            style={{ scaleY, background: 'var(--accent-primary)' }}
+          />
 
           <div className="flex flex-col gap-8">
             {timeline.map((item, i) => {
@@ -270,21 +287,21 @@ export default function AboutSkills() {
                 >
                   <div className="md:w-1/2">
                     <div
-                      className={`glass-card rounded-2xl p-6 border transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(255,30,107,0.3)] hover:border-rose-400 ${
+                      className={`glass rounded-2xl p-6 border transition-all duration-300 hover:scale-[1.01] hover:shadow-md ${
                         isLeft ? "md:text-right" : "md:text-left"
                       }`}
-                      style={{ borderColor: `rgba(255, 30, 107, 0.2)`, boxShadow: "0 4px 15px rgba(0, 0, 0, 0.2)" }}
+                      style={{ borderColor: `rgba(0, 0, 0, 0.05)`, boxShadow: "0 8px 24px rgba(0, 0, 0, 0.08)" }}
                     >
                       <span
                         className="text-sm font-mono font-bold mb-2 block"
-                        style={{ color: item.accent }}
+                        style={{ color: 'var(--accent-primary)' }}
                       >
                         {item.year}
                       </span>
-                      <h4 className="font-bold text-lg text-white mb-2">
+                      <h4 className="font-bold text-lg text-slate-800 mb-2">
                         {item.title}
                       </h4>
-                      <p className="text-rose-200/60 text-sm leading-relaxed font-medium">
+                      <p className="text-slate-500 text-sm leading-relaxed font-medium">
                         {item.desc}
                       </p>
                     </div>
@@ -293,8 +310,8 @@ export default function AboutSkills() {
                   {/* Center dot */}
                   <div className="hidden md:flex w-5 h-5 rounded-full items-center justify-center flex-shrink-0 z-10"
                     style={{
-                      background: item.accent,
-                      boxShadow: `0 0 12px ${item.accent}80, 0 0 24px ${item.accent}40`,
+                      background: 'var(--accent-primary)',
+                      boxShadow: `0 0 12px var(--accent-primary), 0 0 24px color-mix(in srgb, var(--accent-primary) 40%, transparent)`,
                     }}
                   >
                     <div className="w-2 h-2 rounded-full bg-white" />

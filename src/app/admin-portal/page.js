@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Lock, Upload, LogOut, CheckCircle, Trash2, Edit3, MessageSquare, LayoutGrid, Mail, Clock, Film, Loader2, X } from "lucide-react";
+import { Lock, Upload, LogOut, CheckCircle, Trash2, Edit3, MessageSquare, LayoutGrid, Mail, Clock, Film, Loader2, X, Link2 } from "lucide-react";
 import FloatingOrbs from "@/components/FloatingOrbs";
 import Link from "next/link";
 
@@ -14,12 +14,15 @@ export default function AdminPortal() {
   const [tab, setTab] = useState("upload");
 
   // Upload form
+  const [projectType, setProjectType] = useState("video"); // 'video' or 'image'
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("GFX Design");
   const [description, setDescription] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [videoFile, setVideoFile] = useState(null);
   const [videoPreview, setVideoPreview] = useState("");
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [dragOver, setDragOver] = useState(false);
@@ -39,6 +42,10 @@ export default function AdminPortal() {
   // Messages
   const [messages, setMessages] = useState([]);
 
+  // Socials
+  const [socials, setSocials] = useState([]);
+  const [savingSocial, setSavingSocial] = useState(null);
+
   useEffect(() => {
     fetch("/api/auth-check")
       .then(r => {
@@ -57,11 +64,19 @@ export default function AdminPortal() {
   }, []);
 
   useEffect(() => {
-    if (authenticated) { fetchProjects(); fetchMessages(); }
+    if (authenticated) { fetchProjects(); fetchMessages(); fetchSocials(); }
   }, [authenticated]);
 
   const fetchProjects = () => fetch("/api/videos").then(r => r.json()).then(setProjects);
   const fetchMessages = () => fetch("/api/messages").then(r => r.json()).then(setMessages);
+  const fetchSocials = () => fetch("/api/socials").then(r => r.json()).then(setSocials);
+
+  const handleSaveSocial = async (id, href) => {
+    setSavingSocial(id);
+    await fetch("/api/socials", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, href }) });
+    await fetchSocials();
+    setSavingSocial(null);
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -73,20 +88,38 @@ export default function AdminPortal() {
   // Handle file selection
   const handleFileSelect = (file) => {
     if (!file) return;
-    const validTypes = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/x-matroska"];
-    if (!validTypes.includes(file.type)) {
-      alert("Please select a valid video file (MP4, WebM, MOV, AVI, MKV)");
-      return;
+
+    if (projectType === "video") {
+      const validTypes = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/x-matroska"];
+      if (!validTypes.includes(file.type)) {
+        alert("Please select a valid video file (MP4, WebM, MOV, AVI, MKV)");
+        return;
+      }
+      setVideoFile(file);
+      const url = URL.createObjectURL(file);
+      setVideoPreview(url);
+    } else {
+      const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+      if (!validTypes.includes(file.type)) {
+        alert("Please select a valid image file (JPEG, PNG, WebP, GIF)");
+        return;
+      }
+      setImageFile(file);
+      const url = URL.createObjectURL(file);
+      setImagePreview(url);
     }
-    setVideoFile(file);
-    const url = URL.createObjectURL(file);
-    setVideoPreview(url);
   };
 
   const clearFile = () => {
-    setVideoFile(null);
-    if (videoPreview) URL.revokeObjectURL(videoPreview);
-    setVideoPreview("");
+    if (projectType === "video") {
+      setVideoFile(null);
+      if (videoPreview) URL.revokeObjectURL(videoPreview);
+      setVideoPreview("");
+    } else {
+      setImageFile(null);
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+      setImagePreview("");
+    }
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -125,24 +158,25 @@ export default function AdminPortal() {
   // Handle upload
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!videoFile) { alert("Please select a video file"); return; }
+    const activeFile = projectType === "video" ? videoFile : imageFile;
+    if (!activeFile) { alert(`Please select a ${projectType} file`); return; }
 
     setUploading(true);
-    setUploadProgress("Uploading video...");
+    setUploadProgress(`Uploading ${projectType}...`);
 
     try {
-      // Step 1: Upload the video file
+      // Step 1: Upload the main file
       const formData = new FormData();
-      formData.append("file", videoFile);
+      formData.append("file", activeFile);
 
       const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!uploadRes.ok) throw new Error("Video upload failed");
+      if (!uploadRes.ok) throw new Error(`${projectType} upload failed`);
 
       const uploadData = await uploadRes.json();
       
       let thumbnailUrl = "";
-      // Step 2: Upload thumbnail if provided
-      if (thumbFile) {
+      // Step 2: Upload thumbnail if provided (only for videos)
+      if (projectType === "video" && thumbFile) {
         setUploadProgress("Uploading thumbnail...");
         const thumbData = new FormData();
         thumbData.append("file", thumbFile);
@@ -163,14 +197,14 @@ export default function AdminPortal() {
           title,
           category,
           description,
-          type: "video",
+          type: projectType,
           url: uploadData.url,
           thumbnailUrl
         })
       });
 
       if (projectRes.ok) {
-        setSuccessMsg("Video uploaded & published!");
+        setSuccessMsg(`${projectType === "video" ? "Video" : "Image"} uploaded & published!`);
         setTitle(""); setDescription(""); clearFile(); clearThumb();
         fetchProjects();
         setTimeout(() => setSuccessMsg(""), 4000);
@@ -203,21 +237,21 @@ export default function AdminPortal() {
 
   const unreadCount = messages.filter(m => !m.read).length;
 
-  if (checking) return <div className="min-h-screen bg-kafka-theme flex items-center justify-center"><div className="w-8 h-8 border-2 border-purple-500 rounded-full animate-spin border-t-transparent" /></div>;
+  if (checking) return <div className="min-h-screen bg-mograph-theme flex items-center justify-center"><div className="w-8 h-8 border-2 border-accent-primary rounded-full animate-spin border-t-transparent" /></div>;
 
   if (!authenticated) {
     return (
-      <main className="min-h-screen bg-kafka-theme text-white p-6 relative overflow-hidden">
+      <main className="min-h-screen bg-mograph-theme text-slate-800 p-6 relative overflow-hidden">
         <FloatingOrbs />
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md w-full mx-auto glass-heavy rounded-3xl p-10 shadow-2xl relative z-10" style={{ boxShadow: "0 0 50px rgba(255, 30, 107, 0.1)" }}>
-          <div className="flex justify-center mb-6"><div className="w-16 h-16 bg-purple-100/10 rounded-full flex items-center justify-center border border-purple-500/20"><Lock className="w-8 h-8 text-purple-400" /></div></div>
-          <h1 className="text-3xl font-black gradient-text neon-glow-text text-center mb-2" style={{ fontFamily: "var(--font-outfit)" }}>Admin Dashboard</h1>
-          <p className="text-rose-200/70 font-medium text-sm text-center mb-8">Manage your cinematic portfolio</p>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md w-full mx-auto glass rounded-3xl p-10 shadow-2xl relative z-10">
+          <div className="flex justify-center mb-6"><div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200"><Lock className="w-8 h-8 text-accent-primary" /></div></div>
+          <h1 className="text-3xl font-black gradient-text text-center mb-2" style={{ fontFamily: "var(--font-outfit)" }}>Admin Dashboard</h1>
+          <p className="text-slate-500 font-medium text-sm text-center mb-8">Manage your cinematic portfolio</p>
           <form onSubmit={handleLogin} className="space-y-6">
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter Access Code" className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-rose-200/30 focus:outline-none focus:border-purple-500 text-center tracking-widest shadow-sm" />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter Access Code" className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 placeholder-slate-300 focus:outline-none focus:border-accent-primary text-center tracking-widest shadow-sm" />
             {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-            <button type="submit" className="btn-liquid w-full">Authenticate</button>
-            <div className="text-center mt-4"><Link href="/" className="text-sm text-rose-200/50 hover:text-white transition-colors">Return to public site</Link></div>
+            <button type="submit" className="btn-mograph w-full">Authenticate</button>
+            <div className="text-center mt-4"><Link href="/" className="text-sm text-slate-400 hover:text-accent-primary transition-colors">Return to public site</Link></div>
           </form>
         </motion.div>
       </main>
@@ -225,17 +259,25 @@ export default function AdminPortal() {
   }
 
   return (
-    <main className="min-h-screen bg-kafka-theme relative text-white pb-20">
+    <main className="min-h-screen bg-mograph-theme relative text-slate-800 pb-20">
       <FloatingOrbs />
-      <nav className="border-b border-white/10 bg-black/40 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+      <nav className="border-b border-black/5 bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <span className="text-xl font-bold text-white">Admin<span className="text-rose-500">Dashboard</span></span>
-            <span className="px-2 py-1 bg-green-500/10 text-green-400 text-[10px] rounded-full border border-green-500/20 font-bold uppercase tracking-wider">Online</span>
+            <span className="text-xl font-bold text-slate-800">Admin<span className="text-accent-primary">Dashboard</span></span>
+            <span className="px-2 py-1 bg-green-500/10 text-green-600 text-[10px] rounded-full border border-green-500/20 font-bold uppercase tracking-wider">Online</span>
           </div>
           <div className="flex items-center gap-6">
-            <Link href="/" className="text-sm text-rose-200/50 hover:text-white font-medium transition-colors">View Site</Link>
-            <button onClick={() => { document.cookie = "admin_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"; window.location.reload(); }} className="flex items-center gap-2 text-sm text-red-400 hover:text-red-300 font-medium transition-colors"><LogOut className="w-4 h-4" /> Disconnect</button>
+            <Link href="/" className="text-sm text-slate-500 hover:text-accent-primary font-medium transition-colors">View Site</Link>
+            <button 
+              onClick={async () => { 
+                await fetch("/api/auth", { method: "DELETE" });
+                window.location.reload(); 
+              }} 
+              className="flex items-center gap-2 text-sm text-red-500 hover:text-red-600 font-medium transition-colors"
+            >
+              <LogOut className="w-4 h-4" /> Disconnect
+            </button>
           </div>
         </div>
       </nav>
@@ -244,13 +286,12 @@ export default function AdminPortal() {
       <div className="container mx-auto px-6 pt-8 relative z-10">
         <div className="flex gap-2 mb-8 max-w-4xl mx-auto">
           {[
-            { id: "upload", icon: Upload, label: "Upload Video" },
-            { id: "projects", icon: LayoutGrid, label: `My Projects (${projects.length})` },
-            { id: "messages", icon: MessageSquare, label: "Messages", badge: unreadCount }
+            { id: "upload", icon: Upload, label: "Upload Work" },
+            { id: "projects", icon: LayoutGrid, label: `My Projects (${projects.length})` }
           ].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all relative ${tab === t.id ? "bg-rose-600 text-white shadow-lg shadow-rose-600/20" : "bg-black/40 text-rose-200/50 hover:text-white hover:bg-black/60 border border-white/5"}`}>
+            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all relative ${tab === t.id ? "bg-accent-primary text-white shadow-lg" : "bg-white/60 text-slate-500 hover:text-slate-800 hover:bg-white border border-black/5"}`}>
               <t.icon className="w-4 h-4" /> {t.label}
-              {t.badge > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full text-white text-[10px] flex items-center justify-center shadow-lg border-2 border-void">{t.badge}</span>}
+              {t.badge > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-primary rounded-full text-white text-[10px] flex items-center justify-center shadow-lg border-2 border-white">{t.badge}</span>}
             </button>
           ))}
         </div>
@@ -258,112 +299,128 @@ export default function AdminPortal() {
         <div className="max-w-4xl mx-auto">
           {/* UPLOAD TAB */}
           {tab === "upload" && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="p-8 rounded-3xl glass-heavy" style={{ boxShadow: "0 0 40px rgba(0,0,0,0.3)" }}>
-              <div className="flex items-center gap-4 mb-8 border-b border-white/5 pb-6">
-                <div className="w-12 h-12 bg-rose-500/10 rounded-full flex items-center justify-center border border-rose-500/20"><Film className="w-6 h-6 text-rose-500" /></div>
-                <div><h2 className="text-2xl font-bold text-white">Upload Video Project</h2><p className="text-rose-200/50 text-sm">Upload a video file and publish it to your portfolio</p></div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="p-8 rounded-3xl glass bg-white shadow-sm">
+              <div className="flex items-center justify-between mb-8 border-b border-black/5 pb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200"><Film className="w-6 h-6 text-accent-primary" /></div>
+                  <div><h2 className="text-2xl font-bold text-slate-800">Upload New Project</h2><p className="text-slate-500 text-sm">Upload a video or image — stored on CDN</p></div>
+                </div>
+                
+                {/* Type Toggle */}
+                <div className="flex bg-slate-100 p-1 rounded-xl border border-black/5">
+                  <button onClick={() => { setProjectType("video"); clearFile(); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${projectType === "video" ? "bg-accent-primary text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>VIDEO</button>
+                  <button onClick={() => { setProjectType("image"); clearFile(); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${projectType === "image" ? "bg-accent-primary text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>IMAGE</button>
+                </div>
               </div>
 
-              {successMsg && <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3 text-green-700 font-medium"><CheckCircle className="w-5 h-5" />{successMsg}</div>}
+              {successMsg && <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-3 text-green-400 font-medium"><CheckCircle className="w-5 h-5" />{successMsg}</div>}
 
               <form onSubmit={handleUpload} className="space-y-6">
                 {/* Drag & Drop Zone */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-600 mb-2">Video File</label>
-                  {!videoFile ? (
+                  <label className="block text-sm font-semibold text-slate-600 mb-2">{projectType === "video" ? "Video File" : "Image / Banner File"}</label>
+                  {!(projectType === "video" ? videoFile : imageFile) ? (
                     <div
                       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                       onDragLeave={() => setDragOver(false)}
                       onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFileSelect(e.dataTransfer.files[0]); }}
                       onClick={() => fileInputRef.current?.click()}
-                      className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all ${dragOver ? "border-purple-400 bg-purple-50" : "border-[rgba(106,76,255,0.2)] hover:border-[rgba(106,76,255,0.5)] bg-white/50"}`}
+                      className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all ${dragOver ? "border-accent-primary bg-slate-50" : "border-slate-200 hover:border-accent-primary bg-slate-50/50"}`}
                     >
-                      <Upload className="w-10 h-10 mx-auto mb-4 text-purple-400" />
-                      <p className="text-slate-700 font-semibold">Drag & drop your video here</p>
-                      <p className="text-slate-500 text-sm mt-1">or click to browse files</p>
-                      <p className="text-slate-400 text-xs mt-3 font-medium">MP4, WebM, MOV, AVI, MKV supported</p>
+                      <Upload className="w-10 h-10 mx-auto mb-4 text-slate-300" />
+                      <p className="text-slate-800 font-semibold">Drag & drop your {projectType} here</p>
+                      <p className="text-slate-400 text-sm mt-1">or click to browse files</p>
+                      <p className="text-slate-300 text-xs mt-3 font-medium">{projectType === "video" ? "MP4, WebM, MOV supported" : "JPEG, PNG, WebP, GIF supported"}</p>
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept="video/*"
+                        accept={projectType === "video" ? "video/*" : "image/*"}
                         onChange={(e) => handleFileSelect(e.target.files[0])}
                         className="hidden"
                       />
                     </div>
                   ) : (
-                    <div className="rounded-2xl overflow-hidden border border-[rgba(106,76,255,0.15)] bg-white shadow-sm">
-                      <div className="relative aspect-video bg-black/5">
-                        <video id="video-preview-player" src={videoPreview} className="w-full h-full object-contain" controls muted />
+                    <div className="rounded-2xl overflow-hidden border border-white/10 bg-black/40 shadow-sm">
+                      <div className="relative aspect-video bg-black/20 flex items-center justify-center overflow-hidden">
+                        {projectType === "video" ? (
+                          <video id="video-preview-player" src={videoPreview} className="w-full h-full object-contain" controls muted />
+                        ) : (
+                          <img src={imagePreview} className="w-full h-full object-contain" alt="Preview" />
+                        )}
                         <button
                           type="button"
                           onClick={clearFile}
-                          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 shadow-md border border-[rgba(106,76,255,0.1)] flex items-center justify-center text-slate-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+                          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 shadow-md border border-white/10 flex items-center justify-center text-white hover:bg-red-500 transition-colors"
                         >
                           <X className="w-4 h-4" />
                         </button>
                       </div>
-                      <div className="px-4 py-3 flex items-center justify-between border-t border-[rgba(106,76,255,0.1)] bg-white">
+                      <div className="px-4 py-3 flex items-center justify-between border-t border-black/5 bg-slate-50">
                         <div className="flex items-center gap-3 overflow-hidden">
-                          <Film className="w-4 h-4 text-purple-500 shrink-0" />
-                          <span className="text-sm text-slate-700 font-medium truncate">{videoFile.name}</span>
-                          <span className="text-xs text-slate-400 shrink-0 font-medium">{(videoFile.size / (1024 * 1024)).toFixed(1)} MB</span>
+                          <Film className="w-4 h-4 text-accent-primary shrink-0" />
+                          <span className="text-sm text-slate-700 font-medium truncate">{(projectType === "video" ? videoFile : imageFile).name}</span>
+                          <span className="text-xs text-slate-400 shrink-0 font-medium">{( (projectType === "video" ? videoFile : imageFile).size / (1024 * 1024)).toFixed(1)} MB</span>
                         </div>
-                        <button type="button" onClick={extractThumbnail} className="shrink-0 text-[10px] font-bold bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-lg transition-colors border border-purple-200">
-                          Extract Cover
-                        </button>
+                        {projectType === "video" && (
+                          <button type="button" onClick={extractThumbnail} className="shrink-0 text-[10px] font-bold bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg transition-colors border border-black/5">
+                            Extract Cover
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Thumbnail Zone */}
-                <div>
-                  <label className="block text-sm font-semibold text-slate-600 mb-2">Video Thumbnail (Optional)</label>
-                  {!thumbFile ? (
-                    <div
-                      onClick={() => thumbInputRef.current?.click()}
-                      className="border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all border-[rgba(106,76,255,0.2)] hover:border-[rgba(106,76,255,0.5)] bg-white/50"
-                    >
-                      <Upload className="w-6 h-6 mx-auto mb-2 text-purple-400" />
-                      <p className="text-slate-700 text-sm font-semibold">Add Thumbnail Image</p>
-                      <p className="text-slate-400 text-xs mt-1 font-medium">JPEG, PNG, WebP supported</p>
-                      <input
-                        ref={thumbInputRef}
-                        type="file"
-                        accept="image/jpeg, image/png, image/webp"
-                        onChange={(e) => handleThumbSelect(e.target.files[0])}
-                        className="hidden"
-                      />
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl overflow-hidden border border-[rgba(106,76,255,0.15)] bg-white shadow-sm">
-                      <div className="relative aspect-video bg-black/5">
-                        <img src={thumbPreview} className="w-full h-full object-cover" alt="Thumbnail" />
-                        <button
-                          type="button"
-                          onClick={clearThumb}
-                          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 shadow-md border border-[rgba(106,76,255,0.1)] flex items-center justify-center text-slate-700 hover:bg-red-50 hover:text-red-600 transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                {/* Thumbnail Zone (Video Only) */}
+                {projectType === "video" && (
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-600 mb-2">Video Thumbnail (Optional)</label>
+                    {!thumbFile ? (
+                      <div
+                        onClick={() => thumbInputRef.current?.click()}
+                        className="border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all border-slate-200 hover:border-accent-primary bg-slate-50/50"
+                      >
+                        <Upload className="w-6 h-6 mx-auto mb-2 text-slate-300" />
+                        <p className="text-slate-800 text-sm font-semibold">Add Thumbnail Image</p>
+                        <p className="text-slate-400 text-xs mt-1 font-medium">JPEG, PNG, WebP supported</p>
+                        <input
+                          ref={thumbInputRef}
+                          type="file"
+                          accept="image/jpeg, image/png, image/webp"
+                          onChange={(e) => handleThumbSelect(e.target.files[0])}
+                          className="hidden"
+                        />
                       </div>
-                      <div className="px-4 py-3 flex items-center gap-3 border-t border-[rgba(106,76,255,0.1)] bg-white">
-                        <Film className="w-4 h-4 text-purple-500 shrink-0" />
-                        <span className="text-sm text-slate-700 font-medium truncate">{thumbFile.name}</span>
-                        <span className="text-xs text-slate-400 shrink-0 font-medium">{(thumbFile.size / (1024 * 1024)).toFixed(1)} MB</span>
+                    ) : (
+                      <div className="rounded-2xl overflow-hidden border border-white/10 bg-black/40 shadow-sm">
+                        <div className="relative aspect-video bg-black/20">
+                          <img src={thumbPreview} className="w-full h-full object-cover" alt="Thumbnail" />
+                          <button
+                            type="button"
+                            onClick={clearThumb}
+                            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 shadow-md border border-white/10 flex items-center justify-center text-white hover:bg-red-500 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="px-4 py-3 flex items-center gap-3 border-t border-black/5 bg-slate-50">
+                          <Film className="w-4 h-4 text-accent-primary shrink-0" />
+                          <span className="text-sm text-slate-700 font-medium truncate">{thumbFile.name}</span>
+                          <span className="text-xs text-slate-400 shrink-0 font-medium">{(thumbFile.size / (1024 * 1024)).toFixed(1)} MB</span>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="col-span-2">
                     <label className="block text-sm font-semibold text-slate-600 mb-2">Project Title</label>
-                    <input required type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-white border border-[rgba(106,76,255,0.2)] rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:border-purple-500 shadow-sm" placeholder="e.g. Cyberpunk Edit 2024" />
+                    <input required type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:border-accent-primary shadow-sm" placeholder="e.g. Cyberpunk Edit 2024" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-600 mb-2">Category</label>
-                    <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-white border border-[rgba(106,76,255,0.2)] rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:border-purple-500 shadow-sm font-medium">
+                    <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:border-accent-primary shadow-sm font-medium">
                       <option value="GFX Design">GFX Design</option>
                       <option value="AMV">AMV</option>
                     </select>
@@ -373,14 +430,14 @@ export default function AdminPortal() {
                   </div>
                   <div className="col-span-2">
                     <label className="block text-sm font-semibold text-slate-600 mb-2">Description</label>
-                    <textarea required rows="3" value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-white border border-[rgba(106,76,255,0.2)] rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:border-purple-500 resize-none shadow-sm" placeholder="Tools used, project scope..." />
+                    <textarea required rows="3" value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:border-accent-primary resize-none shadow-sm" placeholder="Tools used, project scope..." />
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={uploading || !videoFile}
-                  className="btn-liquid w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={uploading || (projectType === "video" ? !videoFile : !imageFile)}
+                  className="btn-mograph w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {uploading ? (
                     <><Loader2 className="w-5 h-5 animate-spin" />{uploadProgress}</>
@@ -399,14 +456,14 @@ export default function AdminPortal() {
                 <div className="p-12 rounded-3xl text-center text-slate-500" style={{ background: "rgba(255,255,255,0.7)", border: "1px solid rgba(106,76,255,0.15)", backdropFilter: "blur(20px)" }}>No projects yet.</div>
               ) : projects.map(p => (
                 <div key={p.id} className="rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 shadow-sm transition-all hover:shadow-md" style={{ background: "rgba(255,255,255,0.8)", border: "1px solid rgba(106,76,255,0.15)", backdropFilter: "blur(20px)" }}>
-                  <div className="w-full sm:w-32 h-20 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-[rgba(106,76,255,0.1)]">
-                    {p.type === "video" ? <video src={p.url} className="w-full h-full object-cover" muted preload="metadata" /> : p.type === "image" ? <img src={p.url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-purple-50 flex items-center justify-center text-xs text-purple-400 font-medium">Embed</div>}
+                  <div className="w-full sm:w-32 h-20 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-black/5">
+                    {p.type === "video" ? <video src={p.url} className="w-full h-full object-cover" muted preload="metadata" /> : p.type === "image" ? <img src={p.url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-50 flex items-center justify-center text-xs text-slate-400 font-medium">Embed</div>}
                   </div>
                   <div className="flex-1 min-w-0">
                     {editingId === p.id ? (
                       <div className="space-y-2">
-                        <input value={editData.title} onChange={e => setEditData(d => ({ ...d, title: e.target.value }))} className="w-full bg-white border border-[rgba(106,76,255,0.2)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500 shadow-sm text-slate-800" />
-                        <input value={editData.description} onChange={e => setEditData(d => ({ ...d, description: e.target.value }))} className="w-full bg-white border border-[rgba(106,76,255,0.2)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500 shadow-sm text-slate-800" />
+                        <input value={editData.title} onChange={e => setEditData(d => ({ ...d, title: e.target.value }))} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent-primary shadow-sm text-slate-800" />
+                        <input value={editData.description} onChange={e => setEditData(d => ({ ...d, description: e.target.value }))} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent-primary shadow-sm text-slate-800" />
                         <div className="flex gap-2">
                           <button onClick={() => handleEdit(p.id)} className="px-4 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-semibold shadow-sm">Save</button>
                           <button onClick={() => setEditingId(null)} className="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg text-xs font-medium">Cancel</button>
@@ -416,7 +473,7 @@ export default function AdminPortal() {
                       <>
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-bold text-slate-800 truncate">{p.title}</h3>
-                          <span className="px-2.5 py-0.5 text-[10px] rounded-full font-bold uppercase tracking-wide bg-purple-100 text-purple-700 border border-purple-200">{p.category}</span>
+                          <span className="px-2.5 py-0.5 text-[10px] rounded-full font-bold uppercase tracking-wide bg-slate-100 text-slate-700 border border-slate-200">{p.category}</span>
                         </div>
                         <p className="text-sm text-slate-500 truncate font-medium">{p.description}</p>
                         <p className="text-xs text-slate-400 mt-1 font-medium">{p.type} • {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "—"}</p>
@@ -425,7 +482,7 @@ export default function AdminPortal() {
                   </div>
                   {editingId !== p.id && (
                     <div className="flex gap-2 shrink-0">
-                      <button onClick={() => { setEditingId(p.id); setEditData({ title: p.title, description: p.description }); }} className="p-2 bg-white border border-[rgba(106,76,255,0.1)] shadow-sm hover:border-purple-300 hover:bg-purple-50 rounded-lg transition-colors" title="Edit"><Edit3 className="w-4 h-4 text-purple-600" /></button>
+                      <button onClick={() => { setEditingId(p.id); setEditData({ title: p.title, description: p.description }); }} className="p-2 bg-white border border-black/5 shadow-sm hover:border-slate-300 hover:bg-slate-50 rounded-lg transition-colors" title="Edit"><Edit3 className="w-4 h-4 text-slate-600" /></button>
                       {deleteConfirm === p.id ? (
                         <div className="flex gap-1 bg-red-50 p-1 rounded-lg border border-red-100">
                           <button onClick={() => handleDelete(p.id)} className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-md text-xs font-bold">Delete</button>
@@ -445,26 +502,62 @@ export default function AdminPortal() {
           {tab === "messages" && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
               {messages.length === 0 ? (
-                <div className="p-12 rounded-3xl text-center text-slate-500 font-medium" style={{ background: "rgba(255,255,255,0.7)", border: "1px solid rgba(106,76,255,0.15)", backdropFilter: "blur(20px)" }}>No messages yet.</div>
+                <div className="p-12 rounded-3xl text-center text-slate-500 font-medium" style={{ background: "rgba(255,255,255,0.7)", border: "1px solid rgba(0,0,0,0.05)", backdropFilter: "blur(20px)" }}>No messages yet.</div>
               ) : messages.map(m => (
-                <div key={m.id} className={`rounded-2xl p-5 relative shadow-sm transition-all hover:shadow-md ${!m.read ? "border-l-4 border-l-purple-500" : "border-l-4 border-l-transparent"}`} style={{ background: "rgba(255,255,255,0.8)", borderTop: "1px solid rgba(106,76,255,0.15)", borderRight: "1px solid rgba(106,76,255,0.15)", borderBottom: "1px solid rgba(106,76,255,0.15)", backdropFilter: "blur(20px)" }}>
+                <div key={m.id} className={`rounded-2xl p-5 relative shadow-sm transition-all hover:shadow-md ${!m.read ? "border-l-4 border-l-accent-primary" : "border-l-4 border-l-transparent"}`} style={{ background: "rgba(255,255,255,0.8)", borderTop: "1px solid rgba(0,0,0,0.05)", borderRight: "1px solid rgba(0,0,0,0.05)", borderBottom: "1px solid rgba(0,0,0,0.05)", backdropFilter: "blur(20px)" }}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className={`font-bold text-slate-800 ${!m.read ? "text-base" : "text-sm"}`}>{m.name}</h3>
-                        {!m.read && <span className="w-2 h-2 bg-purple-500 rounded-full shadow-[0_0_5px_rgba(168,85,247,0.5)]" />}
+                        {!m.read && <span className="w-2 h-2 bg-accent-primary rounded-full" />}
                       </div>
-                      <a href={`mailto:${m.email}`} className="text-xs text-purple-600 hover:underline flex items-center gap-1 font-medium"><Mail className="w-3 h-3" />{m.email}</a>
+                      <a href={`mailto:${m.email}`} className="text-xs text-slate-500 hover:underline flex items-center gap-1 font-medium"><Mail className="w-3 h-3" />{m.email}</a>
                       <p className={`mt-3 leading-relaxed ${!m.read ? "text-slate-700 font-medium text-sm" : "text-slate-500 text-sm"}`}>{m.message}</p>
                       <p className="text-[10px] text-slate-400 mt-3 flex items-center gap-1 font-semibold uppercase tracking-wider"><Clock className="w-3 h-3" />{new Date(m.createdAt).toLocaleString()}</p>
                     </div>
                     <div className="flex gap-2 shrink-0 flex-col sm:flex-row">
-                      {!m.read && <button onClick={() => handleMarkRead(m.id)} className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-xs font-semibold shadow-sm transition-colors">Mark Read</button>}
+                      {!m.read && <button onClick={() => handleMarkRead(m.id)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold shadow-sm transition-colors">Mark Read</button>}
                       <button onClick={() => handleDeleteMsg(m.id)} className="p-2 bg-white border border-red-100 shadow-sm hover:border-red-300 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-500" /></button>
                     </div>
                   </div>
                 </div>
               ))}
+            </motion.div>
+          )}
+          {/* SOCIALS TAB */}
+          {tab === "socials" && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="p-8 rounded-3xl glass bg-white shadow-sm">
+              <div className="flex items-center gap-4 mb-8 border-b border-black/5 pb-6">
+                <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200"><Link2 className="w-6 h-6 text-accent-primary" /></div>
+                <div><h2 className="text-2xl font-bold text-slate-800">Social Links</h2><p className="text-slate-500 text-sm">Update your social media URLs</p></div>
+              </div>
+              <div className="space-y-4">
+                {socials.map((s) => (
+                  <div key={s.id} className="flex items-center gap-4 p-4 rounded-2xl border border-black/5 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-black/5 shadow-sm flex-shrink-0">
+                      <span className="text-sm font-black text-slate-700 uppercase">{s.label.slice(0, 2)}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">{s.label}</p>
+                      <input
+                        type="url"
+                        defaultValue={s.href}
+                        onBlur={(e) => {
+                          if (e.target.value !== s.href) handleSaveSocial(s.id, e.target.value);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { e.target.blur(); }
+                        }}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-accent-primary shadow-sm font-medium"
+                        placeholder={`https://...`}
+                      />
+                    </div>
+                    {savingSocial === s.id && <Loader2 className="w-4 h-4 text-accent-primary animate-spin flex-shrink-0" />}
+                    {savingSocial !== s.id && <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 opacity-50" />}
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-slate-400 mt-6 text-center font-medium">Changes auto-save when you click away or press Enter</p>
             </motion.div>
           )}
         </div>

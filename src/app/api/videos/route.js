@@ -81,12 +81,26 @@ export async function DELETE(request) {
   }
 
   const videos = await readVideos();
-  const filtered = videos.filter(v => v.id !== id);
+  const project = videos.find(v => v.id === id);
 
-  if (filtered.length === videos.length) {
+  if (!project) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  // Delete uploaded files from disk
+  const filesToDelete = [project.url, project.thumbnailUrl].filter(Boolean);
+  for (const fileUrl of filesToDelete) {
+    if (fileUrl.startsWith("/uploads/")) {
+      try {
+        const filePath = path.join(process.cwd(), "public", fileUrl);
+        await fs.unlink(filePath);
+      } catch (e) {
+        // File may already be deleted, ignore
+      }
+    }
+  }
+
+  const filtered = videos.filter(v => v.id !== id);
   await writeVideos(filtered);
   return NextResponse.json({ success: true });
 }

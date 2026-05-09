@@ -16,52 +16,41 @@ export default function Home() {
       {/* Scroll-bound canvas background */}
       <CanvasBackground scrollYProgress={scrollYProgress} />
 
-      {/* Static mesh gradient reinforcement */}
-      <div
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 50% at 15% 20%, rgba(255,30,107,0.06) 0%, transparent 60%)," +
-            "radial-gradient(ellipse 50% 40% at 85% 80%, rgba(227,28,95,0.08) 0%, transparent 60%)," +
-            "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(179,27,84,0.04) 0%, transparent 50%)",
-          zIndex: 0,
-        }}
-      />
-
       <Navbar />
 
       <div className="relative z-10 flex flex-col">
         <Hero scrollYProgress={scrollYProgress} />
 
         {/* Divider */}
-        <div className="neon-divider mx-6 max-w-5xl mx-auto w-full opacity-40" />
+        <div className="mograph-divider mx-6 max-w-5xl mx-auto w-full opacity-40" />
 
         <Portfolio />
 
         {/* Divider */}
-        <div className="neon-divider mx-6 max-w-5xl mx-auto w-full opacity-40" />
+        <div className="mograph-divider mx-6 max-w-5xl mx-auto w-full opacity-40" />
 
         <AboutSkills />
 
         {/* Divider */}
-        <div className="neon-divider mx-6 max-w-5xl mx-auto w-full opacity-40" />
+        <div className="mograph-divider mx-6 max-w-5xl mx-auto w-full opacity-40" />
+
 
         <Contact />
 
         {/* Footer */}
-        <footer className="py-12 text-center relative z-10" style={{ background: "rgba(20,5,15,0.85)", borderTop: "1px solid rgba(255,30,107,0.15)" }}>
-          <div className="neon-divider w-64 mx-auto mb-8 opacity-30" />
+        <footer className="py-12 text-center relative z-10" style={{ background: "var(--bg-glass)", borderTop: "1px solid var(--border-subtle)" }}>
+          <div className="mograph-divider w-64 mx-auto mb-8 opacity-30" />
           <p
-            className="font-black text-2xl gradient-text neon-glow-text mb-2 tracking-widest"
+            className="font-black text-2xl gradient-text mb-2 tracking-widest"
             style={{ fontFamily: "var(--font-outfit), sans-serif" }}
           >
-            KIDOSKIEE
+            Just For fun
           </p>
-          <p className="text-rose-400/60 text-xs tracking-widest uppercase mb-1">
-            AMV Editor &amp; Motion Designer
+          <p className="text-slate-500 text-xs tracking-widest uppercase mb-1">
+            shikid
           </p>
-          <p className="text-rose-900 text-xs mt-4">
-            © {new Date().getFullYear()} KIDOSKIEE — Crafted with passion &amp; motion.
+          <p className="text-slate-400 text-xs mt-4">
+            © {new Date().getFullYear()} KID — Crafted with passion &amp; motion.
           </p>
         </footer>
       </div>

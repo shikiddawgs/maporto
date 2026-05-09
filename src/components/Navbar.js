@@ -2,20 +2,36 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Moon, Menu, X } from "lucide-react";
+import { Moon, Sun, Menu, X } from "lucide-react";
 
 const navLinks = [
   { label: "Home", href: "#home" },
-  { label: "About", href: "#skills" },
-  { label: "Works", href: "#works" },
+  { label: "Projects", href: "#works" },
   { label: "Skills", href: "#skills" },
-  { label: "Contact", href: "#contact" },
+  { label: "Socials", href: "#contact" },
 ];
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState("Home");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [theme, setTheme] = useState("light");
+
+  useEffect(() => {
+    // Load saved theme
+    const saved = localStorage.getItem("portfolio-theme") || "light";
+    setTheme(saved);
+    document.documentElement.setAttribute("data-theme", saved);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === "light" ? "dark" : "light";
+    setTheme(next);
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("portfolio-theme", next);
+    // Dispatch a custom event so CanvasBackground can react
+    window.dispatchEvent(new CustomEvent("theme-change", { detail: next }));
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -23,53 +39,78 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Scroll-spy: auto-detect which section is in view
+  useEffect(() => {
+    const sectionIds = ["home", "works", "skills", "contact"];
+    const labelMap = { home: "Home", works: "Projects", skills: "Skills", contact: "Socials" };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Find the entry most visible
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible.length > 0) {
+          const id = visible[0].target.id;
+          if (labelMap[id]) setActive(labelMap[id]);
+        }
+      },
+      { threshold: [0.2, 0.4, 0.6], rootMargin: "-80px 0px -20% 0px" }
+    );
+
+    sectionIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <motion.header
       initial={{ y: -80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-      className="fixed top-0 left-0 right-0 z-50"
+      className="fixed top-0 left-0 right-0 z-50 pointer-events-none"
       style={{ fontFamily: "var(--font-outfit), sans-serif" }}
     >
-      <div
-        className={`transition-all duration-500 ${
-          scrolled
-            ? "bg-black/60 border-b border-white/5 backdrop-blur-xl shadow-[0_4px_30px_rgba(255,30,107,0.1)]"
-            : "bg-transparent"
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between pointer-events-auto">
 
           {/* ── Logo & Admin Link ── */}
           <div className="flex items-center gap-3 group">
-            {/* K Logo Box (Admin Login) */}
+            {/* Profile Picture Box (Admin Login) */}
             <a href="/admin-portal" aria-label="Admin Login">
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="w-9 h-9 rounded-lg flex items-center justify-center font-black text-white text-lg relative overflow-hidden flex-shrink-0 cursor-pointer"
+                className="w-10 h-10 rounded-full flex items-center justify-center relative overflow-hidden flex-shrink-0 cursor-pointer border-2"
                 style={{
-                  background: "linear-gradient(135deg, #ff1e6b 0%, #e31c5f 100%)",
-                  boxShadow: "0 0 16px rgba(255, 30, 107, 0.4), 0 0 4px rgba(255, 30, 107, 0.6) inset",
+                  borderColor: "var(--accent-primary)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+                  background: "transparent"
                 }}
               >
-                {/* Shine */}
-                <div className="absolute top-0 left-0 w-full h-1/2 bg-white/10 rounded-t-lg" />
-                <span className="relative z-10" style={{ fontFamily: "var(--font-outfit), sans-serif" }}>K</span>
+                <motion.img 
+                  src="/profile2.png" 
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
+                />
               </motion.div>
             </a>
 
             {/* Text (Home) */}
             <a href="#home" onClick={() => setActive("Home")} className="flex flex-col leading-none">
               <span
-                className="font-black text-base tracking-[0.12em] text-white hover:text-rose-400 transition-colors duration-300"
-                style={{ fontFamily: "var(--font-outfit), sans-serif" }}
+                className="font-black text-base tracking-[0.12em] mograph-title-shadow hover:text-accent-primary transition-colors duration-300"
+                style={{ fontFamily: "var(--font-outfit), sans-serif", color: "var(--text-primary)" }}
               >
-                KIDOSKIEE
+                KID
               </span>
               <span
                 className="text-[9px] tracking-[0.15em] mt-0.5"
-                style={{ color: "#ff1e6b", fontFamily: "var(--font-inter), sans-serif" }}
+                style={{ color: "var(--accent-muted)", opacity: 0.8, fontFamily: "var(--font-inter), sans-serif" }}
               >
                 キドスキー
               </span>
@@ -77,9 +118,9 @@ export default function Navbar() {
           </div>
 
           {/* ── Desktop Nav ── */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-2">
             {/* Active pill nav */}
-            <div className="flex items-center space-x-1 p-1.5 bg-black/20 border border-white/5 rounded-2xl backdrop-blur-md mr-3">
+            <div className="flex items-center space-x-1 p-1.5 bg-slate-100/50 border border-black/[0.05] rounded-2xl backdrop-blur-md shadow-md mr-3">
               {navLinks.map((link) => (
                 <motion.a
                   key={link.label}
@@ -88,18 +129,14 @@ export default function Navbar() {
                   className={`relative px-4 py-2 text-sm font-bold tracking-wide rounded-xl transition-colors duration-200 ${
                     active === link.label
                       ? "text-white"
-                      : "text-rose-200/50 hover:text-white"
+                      : "text-slate-500 hover:text-slate-900"
                   }`}
                   whileHover={{ scale: 1.05 }}
                 >
                   {active === link.label && (
                     <motion.span
                       layoutId="nav-pill"
-                      className="absolute inset-0 rounded-xl"
-                      style={{
-                        background: "linear-gradient(135deg, #e11d48 0%, #be185d 100%)",
-                        boxShadow: "0 0 15px rgba(225, 29, 72, 0.4)",
-                      }}
+                      className="absolute inset-0 rounded-xl bg-accent-primary"
                       transition={{ type: "spring", stiffness: 350, damping: 30 }}
                     />
                   )}
@@ -108,41 +145,53 @@ export default function Navbar() {
               ))}
             </div>
 
-            {/* Settings / Moon icon */}
-            <button
-              className="w-9 h-9 rounded-full flex items-center justify-center border border-white/10 text-rose-200/50 hover:text-rose-400 hover:border-rose-500/30 transition-all duration-200 mr-2"
-              aria-label="Toggle theme"
-            >
-              <Moon size={15} />
-            </button>
-
-            {/* Hire Me */}
-            <motion.a
-              href="#contact"
-              whileHover={{ scale: 1.05, boxShadow: "0 0 24px rgba(255,30,107,0.3)" }}
-              whileTap={{ scale: 0.97 }}
-              className="px-5 py-2 rounded-full text-sm font-bold text-white transition-all duration-300"
+            {/* Theme Toggle */}
+            <motion.button
+              onClick={toggleTheme}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="w-9 h-9 rounded-full flex items-center justify-center border border-black/[0.05] shadow-md transition-all duration-300 mr-2"
               style={{
-                background: "linear-gradient(135deg, #ff1e6b 0%, #e31c5f 100%)",
-                border: "1px solid rgba(255, 30, 107, 0.4)",
-                boxShadow: "0 0 12px rgba(255, 30, 107, 0.2)",
+                background: theme === "dark" ? "rgba(239,68,68,0.15)" : "rgba(0,0,0,0.03)",
+                color: "var(--accent-primary)",
               }}
+              aria-label="Toggle theme"
+              id="theme-toggle"
             >
-              Hire Me
-            </motion.a>
+              <AnimatePresence mode="wait">
+                {theme === "light" ? (
+                  <motion.div key="moon" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
+                    <Moon size={16} />
+                  </motion.div>
+                ) : (
+                  <motion.div key="sun" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.2 }}>
+                    <Sun size={16} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.button>
           </nav>
 
-          {/* ── Mobile burger ── */}
-          <button
-            id="mobile-menu-btn"
-            className="md:hidden w-9 h-9 flex items-center justify-center text-rose-500"
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label="Toggle Menu"
-          >
-            {menuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          {/* ── Mobile: theme toggle + burger ── */}
+          <div className="md:hidden flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className="w-9 h-9 flex items-center justify-center rounded-full border border-black/[0.05] shadow-sm"
+              style={{ color: "var(--accent-primary)", background: theme === "dark" ? "rgba(239,68,68,0.1)" : "rgba(0,0,0,0.03)" }}
+              aria-label="Toggle theme"
+            >
+              {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
+            </button>
+            <button
+              id="mobile-menu-btn"
+              className="w-9 h-9 flex items-center justify-center text-accent-primary"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label="Toggle Menu"
+            >
+              {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
         </div>
-      </div>
 
       {/* Mobile Menu */}
       <AnimatePresence>
@@ -151,7 +200,8 @@ export default function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden mx-4 mt-1 rounded-2xl bg-[#14050f] shadow-xl overflow-hidden border border-white/5"
+            className="md:hidden mx-4 mt-1 rounded-2xl shadow-xl overflow-hidden border border-black/[0.05]"
+            style={{ background: theme === "dark" ? "#1a1a1a" : "#ffffff" }}
           >
             <div className="p-4 flex flex-col gap-1">
               {navLinks.map((link) => (
@@ -160,19 +210,12 @@ export default function Navbar() {
                   href={link.href}
                   onClick={() => { setActive(link.label); setMenuOpen(false); }}
                   whileHover={{ x: 8 }}
-                  className="px-4 py-3 text-sm font-medium text-white hover:text-rose-400 border border-transparent hover:bg-rose-500/10 rounded-xl transition-all"
+                  className="px-4 py-3 text-sm font-medium hover:text-accent-primary border border-transparent hover:bg-slate-50 rounded-xl transition-all"
+                  style={{ color: "var(--text-muted)" }}
                 >
                   {link.label}
                 </motion.a>
               ))}
-              <a
-                href="#contact"
-                className="mt-2 text-sm text-center py-2.5 rounded-xl font-semibold text-white"
-                style={{ border: "1px solid rgba(255, 30, 107, 0.3)", background: "linear-gradient(135deg, #ff1e6b 0%, #e31c5f 100%)" }}
-                onClick={() => setMenuOpen(false)}
-              >
-                Hire Me
-              </a>
             </div>
           </motion.div>
         )}

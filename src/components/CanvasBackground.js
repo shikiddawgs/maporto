@@ -3,129 +3,106 @@
 import { useRef, useEffect } from "react";
 import { useSpring } from "framer-motion";
 
-// Generates light blue/lavender canvas frames procedurally and draws ripples
-function drawFrame(ctx, width, height, progress, ripples) {
+function getShapeColor() {
+  const style = getComputedStyle(document.documentElement);
+  return style.getPropertyValue("--shape-color").trim() || "0, 0, 0";
+}
+
+function getBgColors() {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  return isDark
+    ? { bg1: "#141414", bg2: "#1a1a1a", gridAlphaBase: 0.04 }
+    : { bg1: "#ffffff", bg2: "#f8fafc", gridAlphaBase: 0.02 };
+}
+
+function drawFrame(ctx, width, height, progress, particles) {
   ctx.clearRect(0, 0, width, height);
 
-  // Dark burgundy background
-  const bgGrad = ctx.createRadialGradient(
-    width * 0.5,
-    height * 0.4,
-    0,
-    width * 0.5,
-    height * 0.5,
-    width * 0.8
-  );
-  bgGrad.addColorStop(0, "#1a0b16"); // bg-deep
-  bgGrad.addColorStop(0.5, "#14050f"); // bg-void
-  bgGrad.addColorStop(1, "#0a0308"); // darker
+  const { bg1, bg2, gridAlphaBase } = getBgColors();
+  const shapeColor = getShapeColor();
+
+  // Background gradient
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+  bgGrad.addColorStop(0, bg1);
+  bgGrad.addColorStop(1, bg2);
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, width, height);
 
-  const t = progress; // 0..1
+  const t = progress;
 
-  // ─── LAYER 1: Large pulsing bloom ───
-  const bloomX = width * (0.3 + Math.sin(t * Math.PI) * 0.2);
-  const bloomY = height * (0.5 - t * 0.3);
-  const bloomR = width * (0.5 + t * 0.3);
-  const bloom = ctx.createRadialGradient(bloomX, bloomY, 0, bloomX, bloomY, bloomR);
-  bloom.addColorStop(0, `rgba(255, 30, 107, ${0.08 + t * 0.05})`);
-  bloom.addColorStop(0.5, `rgba(179, 27, 84, ${0.05 + t * 0.03})`);
-  bloom.addColorStop(1, "transparent");
-  ctx.fillStyle = bloom;
-  ctx.fillRect(0, 0, width, height);
-
-  // ─── LAYER 2: Flowing lines / ribbons ───
-  const numLines = 5;
-  for (let i = 0; i < numLines; i++) {
-    const lp = i / numLines;
-    const phase = lp * Math.PI * 2 + t * Math.PI * 1.5;
-    const alpha = (0.1 + Math.sin(phase + t * 3) * 0.05) * (1 - Math.abs(lp - 0.5) * 1.2);
-    if (alpha <= 0) continue;
-
-    ctx.beginPath();
-    const startX = 0;
-    const startY = height * (0.2 + lp * 0.6);
-    ctx.moveTo(startX, startY);
-
-    for (let x = 0; x <= width; x += 10) {
-      const xFrac = x / width;
-      const y =
-        startY +
-        Math.sin(xFrac * Math.PI * 3 + phase) * height * 0.05 +
-        Math.sin(xFrac * Math.PI * 5 + phase * 1.3 + t * 2) * height * 0.02;
-      ctx.lineTo(x, y);
-    }
-
-    const color = i % 2 === 0 ? `rgba(255, 30, 107, ${alpha})` : `rgba(227, 28, 95, ${alpha})`;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1 + lp * 1.5;
-    ctx.stroke();
-  }
-
-  // ─── LAYER 3: Grid lines ───
-  const gridAlpha = 0.02 + t * 0.01;
-  const gridSize = 60;
-  ctx.strokeStyle = `rgba(255, 30, 107, ${gridAlpha})`;
+  // Grid
+  const gridAlpha = gridAlphaBase + t * 0.01;
+  ctx.strokeStyle = `rgba(${shapeColor}, ${gridAlpha})`;
   ctx.lineWidth = 0.5;
-  for (let x = 0; x < width; x += gridSize) {
-    ctx.beginPath();
+  ctx.beginPath();
+  for (let x = 0; x < width; x += 100) {
     ctx.moveTo(x, 0);
     ctx.lineTo(x, height);
-    ctx.stroke();
   }
-  for (let y = 0; y < height; y += gridSize) {
-    ctx.beginPath();
+  for (let y = 0; y < height; y += 100) {
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
-    ctx.stroke();
   }
+  ctx.stroke();
 
-  // ─── LAYER 4: Mouse Ripples / Splash ───
-  for (let i = ripples.length - 1; i >= 0; i--) {
-    const r = ripples[i];
-    // Expansion and fade
-    r.radius += r.speed;
-    r.life -= 0.015;
+  // Animated shapes
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.x < 0) p.x = width;
+    if (p.x > width) p.x = 0;
+    if (p.y < 0) p.y = height;
+    if (p.y > height) p.y = 0;
 
-    if (r.life <= 0) {
-      ripples.splice(i, 1);
-      continue;
+    const scrollOffset = t * height * p.parallax;
+    const drawY = (p.y + scrollOffset) % height;
+
+    ctx.save();
+    ctx.translate(p.x, drawY);
+    ctx.rotate(p.rotation + Date.now() * p.rotationSpeed + t * p.rotationSpeed * 50);
+
+    const baseOpacityMult = document.documentElement.getAttribute("data-theme") === "dark" ? 2.5 : 1.0;
+    const alpha = p.opacity * baseOpacityMult * (0.8 + Math.sin(Date.now() * 0.002 + p.x) * 0.2);
+    ctx.strokeStyle = `rgba(${shapeColor}, ${alpha})`;
+    ctx.fillStyle = `rgba(${shapeColor}, ${alpha * (baseOpacityMult === 2.5 ? 0.3 : 0.15)})`;
+    ctx.lineWidth = 1.8;
+
+    const size = p.size;
+    if (p.shape === "square") {
+      ctx.strokeRect(-size / 2, -size / 2, size, size);
+    } else if (p.shape === "triangle") {
+      ctx.beginPath();
+      ctx.moveTo(0, -size / 2);
+      ctx.lineTo(size / 2, size / 2);
+      ctx.lineTo(-size / 2, size / 2);
+      ctx.closePath();
+      ctx.stroke();
+    } else if (p.shape === "plus") {
+      ctx.beginPath();
+      ctx.moveTo(-size / 2, 0); ctx.lineTo(size / 2, 0);
+      ctx.moveTo(0, -size / 2); ctx.lineTo(0, size / 2);
+      ctx.stroke();
+    } else if (p.shape === "x") {
+      ctx.beginPath();
+      ctx.moveTo(-size / 2, -size / 2); ctx.lineTo(size / 2, size / 2);
+      ctx.moveTo(size / 2, -size / 2); ctx.lineTo(-size / 2, size / 2);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
+      if (size < 5) ctx.fill();
+      else ctx.stroke();
     }
-
-    ctx.beginPath();
-    ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(255, 30, 107, ${r.life * 0.5})`;
-    ctx.lineWidth = 1 + r.life * 2;
-    ctx.stroke();
-
-    // Inner filled drop
-    ctx.beginPath();
-    ctx.arc(r.x, r.y, r.radius * 0.3, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(227, 28, 95, ${r.life * 0.2})`;
-    ctx.fill();
-  }
-
-  // ─── LAYER 5: Vignette (Dark theme) ───
-  const vignette = ctx.createRadialGradient(
-    width / 2, height / 2, height * 0.3,
-    width / 2, height / 2, width * 0.8
-  );
-  vignette.addColorStop(0, "transparent");
-  vignette.addColorStop(1, "rgba(10, 3, 8, 0.6)");
-  ctx.fillStyle = vignette;
-  ctx.fillRect(0, 0, width, height);
+    ctx.restore();
+  });
 }
 
 export default function CanvasBackground({ scrollYProgress }) {
   const canvasRef = useRef(null);
   const rafRef = useRef(null);
   const progressRef = useRef(0);
-  
-  // Ripple state (kept in ref for performance)
-  const ripplesRef = useRef([]);
+  const particlesRef = useRef([]);
 
-  // Smooth spring
   const springProgress = useSpring(scrollYProgress, { stiffness: 60, damping: 20 });
 
   useEffect(() => {
@@ -133,45 +110,46 @@ export default function CanvasBackground({ scrollYProgress }) {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
 
+    const particleCount = 40;
+    const shapes = ["square", "triangle", "plus", "x", "circle"];
+    particlesRef.current = Array.from({ length: particleCount }, () => {
+      const shape = shapes[Math.floor(Math.random() * shapes.length)];
+      const isCircle = shape === "circle";
+      return {
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        size: isCircle ? Math.random() * 3 + 1 : Math.random() * 12 + 6,
+        opacity: isCircle ? Math.random() * 0.4 + 0.15 : Math.random() * 0.2 + 0.08,
+        shape: shape,
+        rotation: Math.random() * Math.PI * 2,
+        rotationSpeed: (Math.random() - 0.5) * 0.001,
+        parallax: isCircle ? Math.random() * 0.2 + 0.1 : Math.random() * 0.5 + 0.2,
+      };
+    });
+
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      drawFrame(ctx, canvas.width, canvas.height, progressRef.current, ripplesRef.current);
+      drawFrame(ctx, canvas.width, canvas.height, progressRef.current, particlesRef.current);
     };
 
     resize();
     window.addEventListener("resize", resize);
 
-    // Mouse tracker for water splash
-    const handleMouseMove = (e) => {
-      // Add a new ripple every few pixels or occasionally
-      if (Math.random() > 0.4) {
-        ripplesRef.current.push({
-          x: e.clientX,
-          y: e.clientY,
-          radius: 5 + Math.random() * 10,
-          speed: 1 + Math.random() * 2,
-          life: 1.0,
-        });
-      }
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-
-    // Animate
     const tick = () => {
-      drawFrame(ctx, canvas.width, canvas.height, progressRef.current, ripplesRef.current);
+      drawFrame(ctx, canvas.width, canvas.height, progressRef.current, particlesRef.current);
       rafRef.current = requestAnimationFrame(tick);
     };
     tick();
 
     return () => {
       window.removeEventListener("resize", resize);
-      window.removeEventListener("mousemove", handleMouseMove);
       cancelAnimationFrame(rafRef.current);
     };
   }, []);
 
-  // Update progress from scroll
   useEffect(() => {
     return springProgress.on("change", (v) => {
       progressRef.current = v;
