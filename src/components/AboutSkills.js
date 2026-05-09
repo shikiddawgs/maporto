@@ -122,7 +122,7 @@ function SkillBadge({ skill, index }) {
   const springY = useSpring(y, { stiffness: 300, damping: 20 });
 
   const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
+  const inView = useInView(ref, { once: false, margin: "-60px" });
 
   return (
     <motion.div
@@ -199,7 +199,7 @@ function SkillBadge({ skill, index }) {
 export default function AboutSkills() {
   const sectionRef = useRef(null);
   const timelineRef = useRef(null);
-  const inView = useInView(sectionRef, { once: true, margin: "-80px" });
+  const inView = useInView(sectionRef, { once: false, margin: "-80px" });
 
   const { scrollYProgress } = useScroll({
     target: timelineRef,

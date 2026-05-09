@@ -101,11 +101,11 @@ export default function Hero({ scrollYProgress }) {
         <div className="absolute bottom-[35%] right-[40%] border-2 rounded-full pointer-events-none" style={{ width: 40, height: 40, borderColor: "rgba(var(--shape-color), 0.1)" }} />
         <div className="absolute top-[60%] right-[35%] border-2 rounded-full pointer-events-none" style={{ width: 80, height: 80, borderColor: "rgba(var(--shape-color), 0.1)" }} />
 
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[420px_1fr_380px] gap-0 max-w-[1400px] mx-auto w-full px-6 pt-24 pb-4">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[420px_1fr_380px] gap-0 max-w-[1400px] mx-auto w-full px-6 pt-32 lg:pt-24 pb-4">
 
           {/* LEFT COLUMN */}
           <motion.div style={{ y: leftY }} className="flex flex-col justify-center gap-6 py-8 lg:py-0">
-            <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, y: -50, x: 0 }} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }} className="-mt-12">
+            <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, y: -50, x: 0 }} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}>
               <p className="text-slate-400 text-xl font-light">Hello! <span className="font-bold text-accent-primary">I&apos;m</span></p>
             </motion.div>
 

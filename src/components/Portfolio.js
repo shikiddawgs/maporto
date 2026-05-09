@@ -16,7 +16,7 @@ function getYoutubeId(url) {
 function VideoCard({ item, index, onOpenLightbox }) {
   const [isHovered, setIsHovered] = useState(false);
   const cardRef = useRef(null);
-  const inView = useInView(cardRef, { once: true, margin: "-80px" });
+  const inView = useInView(cardRef, { once: false, margin: "-80px" });
 
   const youtubeId = item.type === "video" ? getYoutubeId(item.url) : null;
   const isNativeVideo = item.type === "video" && !youtubeId;
@@ -199,7 +199,7 @@ export default function Portfolio() {
   const [selectedVideo, setSelectedVideo] = useState(null);
   
   const sectionRef = useRef(null);
-  const inView = useInView(sectionRef, { once: true, margin: "-100px" });
+  const inView = useInView(sectionRef, { once: false, margin: "-100px" });
 
   // Lock body scroll + Lenis when lightbox is open
   useEffect(() => {

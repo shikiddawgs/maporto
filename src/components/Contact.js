@@ -295,7 +295,7 @@ export default function Contact() {
                   transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                 />
               </div>
-              <p className="text-xs text-slate-400 font-medium truncate">Are you interested in collaborating with me?</p>
+              <p className="text-xs text-slate-400 font-medium">Are you interested in collaborating with me?</p>
             </div>
           </motion.div>
 
