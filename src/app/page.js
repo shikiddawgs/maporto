@@ -7,6 +7,7 @@ import Hero from "@/components/Hero";
 import AboutSkills from "@/components/AboutSkills";
 import Portfolio from "@/components/Portfolio";
 import Contact from "@/components/Contact";
+import MusicPlayer from "@/components/MusicPlayer";
 
 export default function Home() {
   const { scrollYProgress } = useScroll();
@@ -54,6 +55,9 @@ export default function Home() {
           </p>
         </footer>
       </div>
+
+      {/* Floating Music Player */}
+      <MusicPlayer />
     </main>
   );
 }
