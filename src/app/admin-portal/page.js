@@ -162,10 +162,10 @@ export default function AdminPortal() {
     const activeFile = projectType === "video" ? videoFile : imageFile;
     if (!activeFile) { alert(`Please select a ${projectType} file`); return; }
 
-    // Client-side size check (200MB max)
-    const MAX_SIZE = 200 * 1024 * 1024;
+    // Client-side size check (100MB max for GitHub push)
+    const MAX_SIZE = 100 * 1024 * 1024;
     if (activeFile.size > MAX_SIZE) {
-      alert(`File too large! Maximum size is 200MB, your file is ${(activeFile.size / (1024 * 1024)).toFixed(1)}MB`);
+      alert(`File too large! Maximum size is 100MB for auto-deploy.\nYour file is ${(activeFile.size / (1024 * 1024)).toFixed(1)}MB.\n\nTip: Compress the video or use a shorter clip.`);
       return;
     }
 
@@ -209,10 +209,22 @@ export default function AdminPortal() {
       });
 
       if (projectRes.ok) {
-        setSuccessMsg(`${projectType === "video" ? "Video" : "Image"} uploaded & published!`);
+        // Step 4: Auto-deploy to kido.my.id
+        setUploadProgress("Deploying to kido.my.id...");
+        try {
+          const deployRes = await fetch("/api/deploy", { method: "POST" });
+          const deployData = await deployRes.json();
+          if (deployRes.ok) {
+            setSuccessMsg(`${projectType === "video" ? "Video" : "Image"} uploaded & deploying to kido.my.id! 🚀`);
+          } else {
+            setSuccessMsg(`${projectType === "video" ? "Video" : "Image"} uploaded! (Auto-deploy failed: ${deployData.error})`);
+          }
+        } catch {
+          setSuccessMsg(`${projectType === "video" ? "Video" : "Image"} uploaded! (Deploy unavailable)`);
+        }
         setTitle(""); setDescription(""); clearFile(); clearThumb();
         fetchProjects();
-        setTimeout(() => setSuccessMsg(""), 4000);
+        setTimeout(() => setSuccessMsg(""), 6000);
       }
     } catch (err) {
       alert("Upload failed: " + err.message);
@@ -225,6 +237,8 @@ export default function AdminPortal() {
   const handleDelete = async (id) => {
     await fetch(`/api/videos?id=${id}`, { method: "DELETE" });
     setDeleteConfirm(null); fetchProjects();
+    // Auto-deploy deletion to kido.my.id
+    fetch("/api/deploy", { method: "POST" }).catch(() => {});
   };
 
   const handleEdit = async (id) => {
