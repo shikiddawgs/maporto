@@ -209,22 +209,10 @@ export default function AdminPortal() {
       });
 
       if (projectRes.ok) {
-        // Step 4: Auto-deploy to kido.my.id
-        setUploadProgress("Deploying to kido.my.id...");
-        try {
-          const deployRes = await fetch("/api/deploy", { method: "POST" });
-          const deployData = await deployRes.json();
-          if (deployRes.ok) {
-            setSuccessMsg(`${projectType === "video" ? "Video" : "Image"} uploaded & deploying to kido.my.id! 🚀`);
-          } else {
-            setSuccessMsg(`${projectType === "video" ? "Video" : "Image"} uploaded! (Auto-deploy failed: ${deployData.error})`);
-          }
-        } catch {
-          setSuccessMsg(`${projectType === "video" ? "Video" : "Image"} uploaded! (Deploy unavailable)`);
-        }
+        setSuccessMsg(`${projectType === "video" ? "Video" : "Image"} uploaded & published!`);
         setTitle(""); setDescription(""); clearFile(); clearThumb();
         fetchProjects();
-        setTimeout(() => setSuccessMsg(""), 6000);
+        setTimeout(() => setSuccessMsg(""), 4000);
       }
     } catch (err) {
       alert("Upload failed: " + err.message);
@@ -237,8 +225,6 @@ export default function AdminPortal() {
   const handleDelete = async (id) => {
     await fetch(`/api/videos?id=${id}`, { method: "DELETE" });
     setDeleteConfirm(null); fetchProjects();
-    // Auto-deploy deletion to kido.my.id
-    fetch("/api/deploy", { method: "POST" }).catch(() => {});
   };
 
   const handleEdit = async (id) => {

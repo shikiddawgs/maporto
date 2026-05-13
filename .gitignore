@@ -41,5 +41,4 @@ yarn-error.log*
 next-env.d.ts
 
 # Auto-excluded: files too large for GitHub (>95MB)
-public/uploads/1778689255295-va61lw.mp4
-public/uploads/1778692333880-3ehb2b.mp4
+/public/uploads/
