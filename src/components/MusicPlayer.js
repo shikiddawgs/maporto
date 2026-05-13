@@ -22,26 +22,25 @@ export default function MusicPlayer() {
       });
     }
 
-    const handleFirstInteraction = () => {
+    const events = ["click", "touchstart", "scroll", "keydown", "mousemove"];
+
+    const handleInteraction = () => {
       if (!hasAutoPlayed.current && audioRef.current) {
         audioRef.current.play()
           .then(() => {
             hasAutoPlayed.current = true;
+            events.forEach((event) => document.removeEventListener(event, handleInteraction));
           })
-          .catch((e) => console.log("Autoplay prevented:", e));
+          .catch((e) => {
+            // Keep listening if prevented (e.g., scroll might be ignored, but click works later)
+          });
       }
-      
-      // Cleanup listeners after the first user interaction
-      const events = ["click", "touchstart", "scroll", "keydown"];
-      events.forEach((event) => document.removeEventListener(event, handleFirstInteraction));
     };
 
-    // Attach listeners for interaction-based autoplay
-    const events = ["click", "touchstart", "scroll", "keydown"];
-    events.forEach((event) => document.addEventListener(event, handleFirstInteraction, { once: true, passive: true }));
+    events.forEach((event) => document.addEventListener(event, handleInteraction, { passive: true }));
 
     return () => {
-      events.forEach((event) => document.removeEventListener(event, handleFirstInteraction));
+      events.forEach((event) => document.removeEventListener(event, handleInteraction));
     };
   }, []);
 
