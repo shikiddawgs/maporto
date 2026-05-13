@@ -11,6 +11,8 @@ export default function MusicPlayer() {
   const audioRef = useRef(null);
   const hasAutoPlayed = useRef(false);
   const userPaused = useRef(false);
+  // Track if music was paused because a project video is playing
+  const pausedByVideo = useRef(false);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -45,6 +47,31 @@ export default function MusicPlayer() {
     };
   }, []);
 
+  // Listen for custom events from Portfolio video playback
+  useEffect(() => {
+    const handleVideoPlay = () => {
+      if (audioRef.current && isPlaying && !userPaused.current) {
+        audioRef.current.pause();
+        pausedByVideo.current = true;
+      }
+    };
+
+    const handleVideoStop = () => {
+      if (audioRef.current && pausedByVideo.current && !userPaused.current) {
+        audioRef.current.play().catch(() => {});
+        pausedByVideo.current = false;
+      }
+    };
+
+    window.addEventListener("portfolio-video-play", handleVideoPlay);
+    window.addEventListener("portfolio-video-stop", handleVideoStop);
+
+    return () => {
+      window.removeEventListener("portfolio-video-play", handleVideoPlay);
+      window.removeEventListener("portfolio-video-stop", handleVideoStop);
+    };
+  }, [isPlaying]);
+
   // Pause when tab is hidden, resume when visible
   useEffect(() => {
     const handleVisibility = () => {
@@ -52,8 +79,8 @@ export default function MusicPlayer() {
       if (document.hidden) {
         audioRef.current.pause();
       } else {
-        // Only resume if user didn't manually pause
-        if (hasAutoPlayed.current && !userPaused.current) {
+        // Only resume if user didn't manually pause and not paused by video
+        if (hasAutoPlayed.current && !userPaused.current && !pausedByVideo.current) {
           audioRef.current.play().catch(() => {});
         }
       }
@@ -68,9 +95,11 @@ export default function MusicPlayer() {
       if (isPlaying) {
         audioRef.current.pause();
         userPaused.current = true;
+        pausedByVideo.current = false;
       } else {
         audioRef.current.play().catch(e => console.log("Play prevented"));
         userPaused.current = false;
+        pausedByVideo.current = false;
       }
     }
   };

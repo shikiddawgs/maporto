@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { Play, X, Maximize2, ExternalLink } from "lucide-react";
 
@@ -201,18 +202,25 @@ export default function Portfolio() {
   const sectionRef = useRef(null);
   const inView = useInView(sectionRef, { once: false, margin: "-100px" });
 
-  // Lock body scroll + Lenis when lightbox is open
+  // Lock body scroll + Lenis when lightbox is open, and pause/resume background music
   useEffect(() => {
     if (selectedVideo) {
       document.body.style.overflow = "hidden";
       if (window.__lenis) window.__lenis.stop();
+      // Tell MusicPlayer to pause when a video lightbox opens
+      if (selectedVideo.type === "video" || getYoutubeId(selectedVideo.url)) {
+        window.dispatchEvent(new CustomEvent("portfolio-video-play"));
+      }
     } else {
       document.body.style.overflow = "";
       if (window.__lenis) window.__lenis.start();
+      // Tell MusicPlayer to resume when lightbox closes
+      window.dispatchEvent(new CustomEvent("portfolio-video-stop"));
     }
     return () => {
       document.body.style.overflow = "";
       if (window.__lenis) window.__lenis.start();
+      window.dispatchEvent(new CustomEvent("portfolio-video-stop"));
     };
   }, [selectedVideo]);
 
@@ -287,98 +295,102 @@ export default function Portfolio() {
           ))}
         </div>
 
-        {/* Floating Video Window */}
-        <AnimatePresence>
-          {selectedVideo && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="fixed inset-0 z-[100] flex items-center justify-center"
-              style={{ touchAction: "none" }}
-              onWheel={(e) => e.stopPropagation()}
-              onTouchMove={(e) => e.preventDefault()}
-              onClick={() => setSelectedVideo(null)}
-            >
-              {/* Backdrop */}
-              <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-
-              {/* Floating Window */}
+        {/* Floating Video Window — rendered via portal to escape z-index stacking context */}
+        {typeof document !== "undefined" && createPortal(
+          <AnimatePresence>
+            {selectedVideo && (
               <motion.div
-                initial={{ scale: 0.85, opacity: 0, y: 30 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.85, opacity: 0, y: 30 }}
-                transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                className="relative z-10 w-[92%] max-w-5xl rounded-2xl overflow-hidden"
-                style={{
-                  boxShadow: "0 25px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08)",
-                  background: "#0a0a0a",
-                }}
-                onClick={(e) => e.stopPropagation()}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                className="fixed inset-0 z-[9999] flex items-center justify-center"
+                style={{ touchAction: "none" }}
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.preventDefault()}
+                onClick={() => setSelectedVideo(null)}
               >
-                {/* Window Title Bar */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]"
-                  style={{ background: "rgba(20,20,20,0.95)" }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => setSelectedVideo(null)}
-                        className="w-3 h-3 rounded-full bg-[#ff5f57] hover:bg-[#ff3b30] transition-colors cursor-pointer"
-                      />
-                      <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
-                      <div className="w-3 h-3 rounded-full bg-[#28c840]" />
-                    </div>
-                    <p className="text-white/60 text-xs font-medium truncate max-w-[300px] ml-2">
-                      {selectedVideo.title}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setSelectedVideo(null)}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
+                {/* Backdrop */}
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
 
-                {/* Video Content */}
-                <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
-                  <div className="absolute inset-0">
-                    {getYoutubeId(selectedVideo.url) ? (
-                      <iframe
-                        src={`https://www.youtube.com/embed/${getYoutubeId(selectedVideo.url)}?autoplay=1&controls=1&rel=0`}
-                        title={selectedVideo.title}
-                        allow="autoplay; encrypted-media; fullscreen"
-                        allowFullScreen
-                        className="w-full h-full border-0"
-                      />
-                    ) : selectedVideo.type === "video" ? (
-                      <video
-                        src={selectedVideo.url}
-                        controls
-                        autoPlay
-                        className="w-full h-full object-contain bg-black"
-                      />
-                    ) : (
-                      <img src={selectedVideo.url} alt={selectedVideo.title} className="w-full h-full object-contain bg-black" />
+                {/* Floating Window */}
+                <motion.div
+                  initial={{ scale: 0.85, opacity: 0, y: 30 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.85, opacity: 0, y: 30 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                  className="relative z-10 w-[92%] max-w-5xl max-h-[90vh] rounded-2xl overflow-hidden flex flex-col"
+                  style={{
+                    boxShadow: "0 25px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08)",
+                    background: "#0a0a0a",
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Window Title Bar */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] shrink-0"
+                    style={{ background: "rgba(20,20,20,0.95)" }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => setSelectedVideo(null)}
+                          className="w-3 h-3 rounded-full bg-[#ff5f57] hover:bg-[#ff3b30] transition-colors cursor-pointer"
+                        />
+                        <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
+                        <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+                      </div>
+                      <p className="text-white/60 text-xs font-medium truncate max-w-[300px] ml-2">
+                        {selectedVideo.title}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSelectedVideo(null)}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  {/* Video Content */}
+                  <div className="relative w-full flex-1 min-h-0" style={{ paddingBottom: "56.25%" }}>
+                    <div className="absolute inset-0">
+                      {getYoutubeId(selectedVideo.url) ? (
+                        <iframe
+                          src={`https://www.youtube.com/embed/${getYoutubeId(selectedVideo.url)}?autoplay=1&controls=1&rel=0`}
+                          title={selectedVideo.title}
+                          allow="autoplay; encrypted-media; fullscreen"
+                          allowFullScreen
+                          className="w-full h-full border-0"
+                        />
+                      ) : selectedVideo.type === "video" ? (
+                        <video
+                          src={selectedVideo.url}
+                          controls
+                          autoPlay
+                          playsInline
+                          className="w-full h-full object-contain bg-black"
+                        />
+                      ) : (
+                        <img src={selectedVideo.url} alt={selectedVideo.title} className="w-full h-full object-contain bg-black" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Bottom Info Bar */}
+                  <div className="px-5 py-4 border-t border-white/[0.06] shrink-0"
+                    style={{ background: "rgba(20,20,20,0.95)" }}
+                  >
+                    <h3 className="text-sm font-bold text-white mb-0.5">{selectedVideo.title}</h3>
+                    {selectedVideo.description && (
+                      <p className="text-white/40 text-xs">{selectedVideo.description}</p>
                     )}
                   </div>
-                </div>
-
-                {/* Bottom Info Bar */}
-                <div className="px-5 py-4 border-t border-white/[0.06]"
-                  style={{ background: "rgba(20,20,20,0.95)" }}
-                >
-                  <h3 className="text-sm font-bold text-white mb-0.5">{selectedVideo.title}</h3>
-                  {selectedVideo.description && (
-                    <p className="text-white/40 text-xs">{selectedVideo.description}</p>
-                  )}
-                </div>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
       </div>
     </section>
   );

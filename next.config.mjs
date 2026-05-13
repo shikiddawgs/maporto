@@ -2,9 +2,11 @@
 const nextConfig = {
   experimental: {
     serverActions: {
-      bodySizeLimit: "500mb",
+      bodySizeLimit: "200mb",
     },
   },
+  // Increase the limit for all server components / route handlers
+  serverExternalPackages: [],
 };
 
 export default nextConfig;

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Lock, Upload, LogOut, CheckCircle, Trash2, Edit3, MessageSquare, LayoutGrid, Mail, Clock, Film, Loader2, X, Link2 } from "lucide-react";
 import FloatingOrbs from "@/components/FloatingOrbs";
 import Link from "next/link";
+import { uploadFile } from "@/app/actions/upload";
 
 export default function AdminPortal() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -155,34 +156,38 @@ export default function AdminPortal() {
     }, "image/png");
   };
 
-  // Handle upload
+  // Handle upload — uses Server Action to bypass route handler 1MB body limit
   const handleUpload = async (e) => {
     e.preventDefault();
     const activeFile = projectType === "video" ? videoFile : imageFile;
     if (!activeFile) { alert(`Please select a ${projectType} file`); return; }
 
+    // Client-side size check (200MB max)
+    const MAX_SIZE = 200 * 1024 * 1024;
+    if (activeFile.size > MAX_SIZE) {
+      alert(`File too large! Maximum size is 200MB, your file is ${(activeFile.size / (1024 * 1024)).toFixed(1)}MB`);
+      return;
+    }
+
     setUploading(true);
     setUploadProgress(`Uploading ${projectType}...`);
 
     try {
-      // Step 1: Upload the main file
+      // Step 1: Upload the main file via Server Action
       const formData = new FormData();
       formData.append("file", activeFile);
 
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!uploadRes.ok) throw new Error(`${projectType} upload failed`);
+      const uploadData = await uploadFile(formData);
+      if (uploadData.error) throw new Error(uploadData.error);
 
-      const uploadData = await uploadRes.json();
-      
       let thumbnailUrl = "";
       // Step 2: Upload thumbnail if provided (only for videos)
       if (projectType === "video" && thumbFile) {
         setUploadProgress("Uploading thumbnail...");
         const thumbData = new FormData();
         thumbData.append("file", thumbFile);
-        const tRes = await fetch("/api/upload", { method: "POST", body: thumbData });
-        if (tRes.ok) {
-          const tResData = await tRes.json();
+        const tResData = await uploadFile(thumbData);
+        if (tResData.success) {
           thumbnailUrl = tResData.url;
         }
       }
