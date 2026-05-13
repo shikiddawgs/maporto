@@ -10,6 +10,7 @@ export default function MusicPlayer() {
   const [isHovered, setIsHovered] = useState(false);
   const audioRef = useRef(null);
   const hasAutoPlayed = useRef(false);
+  const userPaused = useRef(false);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -44,12 +45,32 @@ export default function MusicPlayer() {
     };
   }, []);
 
+  // Pause when tab is hidden, resume when visible
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (!audioRef.current) return;
+      if (document.hidden) {
+        audioRef.current.pause();
+      } else {
+        // Only resume if user didn't manually pause
+        if (hasAutoPlayed.current && !userPaused.current) {
+          audioRef.current.play().catch(() => {});
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
+
   const togglePlay = () => {
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
+        userPaused.current = true;
       } else {
         audioRef.current.play().catch(e => console.log("Play prevented"));
+        userPaused.current = false;
       }
     }
   };
